@@ -7,8 +7,22 @@ var semver = require('semver');
 
 // ordered by how they are read (major.minor.patch)
 var versionNumberTypes = ['major', 'minor', 'patch'];
+
+var prereleaseTypeDetails = [{
+  short: 'alpha',
+  description: 'just proof of concept/exploration level'
+}, {
+  short: 'beta',
+  description: 'API changes not expected but still possible. No known show-stopper bugs.'
+}, {
+  short: 'rc',
+  description: 'release-candidate. API frozen. No known show-stopper bugs.'
+}];
+
 // ordered chronologically
-var prereleaseTypes = ['alpha', 'beta', 'rc'];
+var prereleaseTypes = prereleaseTypeDetails.map(function(prereleaseType) {
+  return prereleaseType.short;
+});
 
 semver.prereleaseTag = function(version) {
   var prereleaseTagRegexResult = version.match(/(-)(\w*\.?\d*)/);
@@ -81,17 +95,27 @@ function bumpVersionInAllFiles(opts) {
 
   var oldPackageJson = require(resolveFrom(process.cwd(), './package.json'));
   //var oldVersion = oldPackageJson.version;
-  // TODO this is just for testing below
-  var oldVersion = '2.0.1-rc.0';
+  // TODO these is just for testing below
+
+  var oldVersion = '2.0.0-alpha.0';
+  //var oldVersion = '2.0.0';
+
+  //var oldVersion = '2.0.1';
+  //var oldVersion = '2.0.1-rc.0';
+  //var oldVersion = '2.0.1-alpha.0';
+
+  //var oldVersion = '2.1.0';
+  //var oldVersion = '2.1.0-alpha.0';
+
   var oldVersionPrereleaseTag = semver.prereleaseTag(oldVersion);
   var oldVersionSanPrereleaseTag = semver.stripPreleaseTag(oldVersion);
 
-  var revisionTypeQuestions = {
+  var releaseTypeQuestions = {
     type: 'list',
-    name: 'revisionType',
+    name: 'releaseType',
     message: 'Choose a version type below.',
     choices: [{
-      name: 'build: just re-building (no code changes -- version stays unchanged)',
+      name: 'build: just re-building (no code changes)',
       short: 'build',
       value: oldVersion
     }, {
@@ -112,7 +136,7 @@ function bumpVersionInAllFiles(opts) {
 
   if (oldVersionPrereleaseTag) {
     var parsedOldVersion = semver.parse(oldVersion);
-    // least significant revision with a non-zero version number.
+    // least significant release with a non-zero version number.
     var oldVersionSmallestRevisionType = versionNumberTypes
       .filter(function(versionNumberType) {
         return parsedOldVersion[versionNumberType] !== 0;
@@ -124,16 +148,15 @@ function bumpVersionInAllFiles(opts) {
     var prereleaseType = !!prereleaseTypeRegexResults && prereleaseTypeRegexResults.length > 0 &&
       prereleaseTypeRegexResults[0];
     var prereleaseIndex = prereleaseTypes.indexOf(prereleaseType);
-    revisionTypeQuestions.choices = [{
-      name: 'alpha: just proof of concept/exploration level',
-      short: 'alpha'
-    }, {
-      name: 'beta: API changes avoided but still possible. No known show-stopper bugs.',
-      short: 'beta'
-    }, {
-      name: 'rc (release-candidate): API frozen. No known show-stopper bugs.',
-      short: 'rc'
-    }]
+
+    releaseTypeQuestions.choices = prereleaseTypeDetails.map(function(prereleaseTypeDetail) {
+      var result = {};
+      var short = prereleaseTypeDetail.short;
+      var description = prereleaseTypeDetail.description;
+      result.value = result.short = short;
+      result.name = short + ': ' + description;
+      return result;
+    })
     .filter(function(choice) {
       var short = choice.short;
       var choicePrereleaseIndex = prereleaseTypes.indexOf(short);
@@ -142,13 +165,12 @@ function bumpVersionInAllFiles(opts) {
     .map(function(choice) {
       var short = choice.short;
       var name = choice.name;
-      var updatedVersion = semver.inc(oldVersion, 'prerelease', prereleaseType);
+      var updatedVersion = semver.inc(oldVersion, 'prerelease', short);
       choice.value = updatedVersion;
       if (short === prereleaseType) {
         choice.name = 'continue pre-' + oldVersionSmallestRevisionType + ': ' +
-          'stay in prerelease, incrementing from ' + oldVersion + ' to ' + updatedVersion;
+          'stay in ' + short;
       } else {
-        updatedVersion = semver.inc(oldVersion, 'prerelease', prereleaseType);
         var choicePrereleaseIndex = prereleaseTypes.indexOf(short);
         if (choicePrereleaseIndex > prereleaseIndex) {
           choice.name = 'bump up to ' + name;
@@ -156,14 +178,12 @@ function bumpVersionInAllFiles(opts) {
       }
       return choice;
     })
-    .concat(revisionTypeQuestions.choices
+    .concat(releaseTypeQuestions.choices
               .map(function(choice) {
                 var short = choice.short;
                 var name = choice.name;
                 if (oldVersionSmallestRevisionType === short && prereleaseType === 'rc') {
-                  choice.name = 'go to production: upgrade current prerelease ' +
-                    short + ' revision from ' +
-                    oldVersion + ' to ' + oldVersionSanPrereleaseTag;
+                  choice.name = 'go to production: upgrade current prerelease ' + short;
                   choice.value = oldVersionSanPrereleaseTag;
                 } else {
                   choice.name = 'new ' + name;
@@ -181,12 +201,14 @@ function bumpVersionInAllFiles(opts) {
     );
   }
 
-  console.log('revisionTypeQuestions');
-  console.log(revisionTypeQuestions);
+  releaseTypeQuestions.choices = releaseTypeQuestions.choices.map(function(choice) {
+    choice.name = choice.name + ' (' + oldVersion + ' -> ' + choice.value + ')';
+    return choice;
+  });
 
-  createPromptObservable(revisionTypeQuestions)
+  createPromptObservable(releaseTypeQuestions)
     .flatMap(function(versionNumberAnswers) {
-      var versionNumber = versionNumberAnswers.revisionType;
+      var versionNumber = versionNumberAnswers.releaseType;
       if (versionNumber === oldVersion) {
         console.warn('Warning: npm does not support semver build numbers. ' +
                      'Keeping version unchanged at ' + oldVersion + '.');
@@ -202,30 +224,27 @@ function bumpVersionInAllFiles(opts) {
           choices: [{
             name: 'No',
             value: false
-          }, {
-            name: 'Yes: alpha (just proof of concept/exploration level)',
-            short: 'alpha',
-            value: 'alpha'
-          }, {
-            name: 'Yes: beta (API changes possible but to be avoided. No known show-stopper bugs.)',
-            short: 'beta',
-            value: 'beta'
-          }, {
-            name: 'Yes: rc (release-candidate: API frozen. No known show-stopper bugs.)',
-            short: 'rc',
-            value: 'rc'
-          }],
+          }].concat(prereleaseTypeDetails.map(function(prereleaseTypeDetail) {
+            var result = {};
+            var short = prereleaseTypeDetail.short;
+            var description = prereleaseTypeDetail.description;
+            result.value = result.short = short;
+            result.name = 'Yes - ' + short + ': ' + description;
+            return result;
+          })),
           default: 0
         };
 
         return createPromptObservable(prereleaseQuestion)
           .map(function(prereleaseAnswers) {
             var prerelease = prereleaseAnswers.prerelease;
-            console.log('prerelease');
-            console.log(prerelease);
             var updatedVersion;
             if (prerelease) {
-              updatedVersion = semver.inc(versionNumber, 'prerelease', prerelease);
+              var releaseType = semver.diff(oldVersion, versionNumber);
+              if (releaseType.indexOf('pre') === -1) {
+                releaseType = 'pre' + releaseType;
+              }
+              updatedVersion = semver.inc(oldVersion, releaseType, prerelease);
             } else {
               updatedVersion = versionNumber;
             }
@@ -233,58 +252,6 @@ function bumpVersionInAllFiles(opts) {
           });
       }
     })
-    /*
-    .flatMap(function(revisionTypeAnswers) {
-      var revisionType = revisionTypeAnswers.revisionType;
-      if (revisionType === 'build') {
-        console.warn('Warning: npm does not support semver build numbers. ' +
-                     'Keeping version unchanged at ' + oldVersion + '.');
-        return Rx.Observable.return(oldVersion);
-      } else if (prereleaseTypes.indexOf(revisionType) > -1) {
-        return Rx.Observable.return(semver.inc(oldVersion, 'prerelease', revisionType));
-      } else if (revisionType === oldVersionSmallestRevisionType) {
-        return Rx.Observable.return(semver.inc(oldVersion, revisionType));
-      } else {
-        var prereleaseQuestion = {
-          type: 'list',
-          name: 'prerelease',
-          message: 'Is this a prerelease (version is unstable and might ' +
-                   'not satisfy the intended compatibility requirements)?',
-          choices: [{
-            name: 'No',
-            value: false
-          }, {
-            name: 'Yes: alpha (just proof of concept/exploration level)',
-            short: 'alpha',
-            value: 'alpha'
-          }, {
-            name: 'Yes: beta (API changes possible but to be avoided. No known show-stopper bugs.)',
-            short: 'beta',
-            value: 'beta'
-          }, {
-            name: 'Yes: rc (release-candidate: API frozen. No known show-stopper bugs.)',
-            short: 'rc',
-            value: 'rc'
-          }],
-          default: 0
-        };
-
-        return createPromptObservable(prereleaseQuestion)
-          .map(function(prereleaseAnswers) {
-            var prerelease = prereleaseAnswers.prerelease;
-            console.log('prerelease');
-            console.log(prerelease);
-            var updatedVersion;
-            if (prerelease) {
-              updatedVersion = semver.inc(oldVersion, 'prerelease', prerelease);
-            } else {
-              updatedVersion = semver.inc(oldVersionSanPrereleaseTag, revisionType);
-            }
-            return updatedVersion;
-          });
-      }
-    })
-    //*/
     .subscribe(function(updatedVersion) {
       console.log('updated from ' + oldVersion + ' to ' + updatedVersion);
     }, function(err) {
@@ -310,10 +277,10 @@ function bumpVersionInAllFiles(opts) {
     //*/
 
     /*
-    .concatMap(function(revisionType) {
-      console.log('revisionType');
-      console.log(revisionType);
-      //return Rx.Observable.return(revisionType);
+    .concatMap(function(releaseType) {
+      console.log('releaseType');
+      console.log(releaseType);
+      //return Rx.Observable.return(releaseType);
       //*
       var prereleaseSource = inquirer.prompt(Rx.Observable.return({
         type: 'list',
@@ -342,16 +309,16 @@ function bumpVersionInAllFiles(opts) {
       return prereleaseSource;
 
       //*
-      var revisionTypeSource = Rx.Observable.return({
-        revisionType: revisionType
+      var releaseTypeSource = Rx.Observable.return({
+        releaseType: releaseType
       });
       //*/
 
       /*
-      if (revisionType === 'build') {
-        return revisionTypeSource;
+      if (releaseType === 'build') {
+        return releaseTypeSource;
       } else {
-        return revisionTypeSource.concat(prereleaseSource);
+        return releaseTypeSource.concat(prereleaseSource);
       }
       //*/
     //*/
@@ -385,7 +352,7 @@ function bumpVersionInAllFiles(opts) {
     setTimeout(function() {
       obs.onNext({
         type: 'list',
-        name: 'revisionType',
+        name: 'releaseType',
         message: 'Choose a version type below.',
         choices: [{
           name: 'build: just re-building (no code changes)',
@@ -415,7 +382,7 @@ function bumpVersionInAllFiles(opts) {
   var prompts = Rx.Observable.create(function(obs) {
     obs.onNext({
     type: 'list',
-    name: 'revisionType',
+    name: 'releaseType',
     message: 'Choose a version type below.',
     choices: [{
       name: 'build: just re-building (no code changes)',
@@ -479,10 +446,10 @@ function bumpVersionInAllFiles(opts) {
       var currentVersion = '2.0.0-0';
       console.log('result');
       console.log(result);
-      var revisionType = result.revisionType;
+      var releaseType = result.releaseType;
       var prerelease = result.prerelease;
       var updatedVersion;
-      if (revisionType === 'build') {
+      if (releaseType === 'build') {
         if (prerelease) {
           updatedVersion = semver.inc(currentVersion, 'prerelease');
         } else {
@@ -490,9 +457,9 @@ function bumpVersionInAllFiles(opts) {
         }
       } else {
         if (prerelease) {
-          updatedVersion = semver.inc(currentVersion, revisionType, prerelease);
+          updatedVersion = semver.inc(currentVersion, releaseType, prerelease);
         } else {
-          updatedVersion = semver.inc(currentVersion, revisionType);
+          updatedVersion = semver.inc(currentVersion, releaseType);
         }
       }
       console.log('updated from ' + currentVersion + ' to ' + updatedVersion);
@@ -503,17 +470,17 @@ function bumpVersionInAllFiles(opts) {
   //var promptSource = Rx.Observable.fromCallback(inquirer.prompt);
 
   /*
-  var revisionTypeSource = promptSource({
+  var releaseTypeSource = promptSource({
     type: 'list',
-    name: 'revisionType',
+    name: 'releaseType',
     message: 'Choose a version type below.',
     choices: ['patch', 'minor', 'major', 'prerelease', 'none']
   })
   .map(function(res) {
-    return res.revisionType;
+    return res.releaseType;
   });
 
-  revisionTypeSource
+  releaseTypeSource
   .subscribe(function(result) {
     console.log('result');
     console.log(result);
@@ -522,15 +489,15 @@ function bumpVersionInAllFiles(opts) {
   });
 
   /*
-  var resultObservable = revisionTypeSource.map(function(revisionType) {
-    console.log('revisionType');
-    console.log(revisionType);
-    if (revisionType === 'none') {
+  var resultObservable = releaseTypeSource.map(function(releaseType) {
+    console.log('releaseType');
+    console.log(releaseType);
+    if (releaseType === 'none') {
       return;
     }
 
     return gulp.src(metadataFiles)
-      .pipe(bump({type: revisionType}))
+      .pipe(bump({type: releaseType}))
       .pipe(gulp.dest('./'))
       .pipe(highland.pipeline(function(s) {
         return s.map(function(file) {
