@@ -7,8 +7,6 @@ var getNewVersion = require('../../get-new-version.js');
 var expect = require('chai').expect;
 var sinon = require('sinon');
 var _ = require('lodash');
-var fixtures = require('../helpers/fixtures');
-var ReadlineStub = require('../helpers/readline');
 var inquirer = require('inquirer');
 var Rx = require('rx');
 
