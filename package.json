@@ -1,6 +1,6 @@
 {
   "name": "bump-version-in-all-files",
-  "version": "1.0.0",
+  "version": "1.0.0-alpha.0",
   "description": "Gulp plugin for bumping version number in all relevant files.",
   "main": "index.js",
   "scripts": {
@@ -23,6 +23,7 @@
   "dependencies": {
     "JSONStream": "^1.0.6",
     "inquirer": "^0.11.0",
+    "lodash": "^3.10.1",
     "resolve-from": "^1.0.1",
     "rx": "^4.0.6",
     "rx-node": "^1.0.1",

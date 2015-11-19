@@ -1,5 +1,6 @@
 'use strict';
-var getNewVersion = require('./get-new-version.js');
+// TODO don't use local version
+var getNewVersion = require('../semver-inc-wizard/index.js');
 var inquirer = require('inquirer');
 var resolveFrom = require('resolve-from');
 var Rx = require('rx');
@@ -10,24 +11,26 @@ var createPromptObservable = Rx.Observable.fromCallback(inquirer.prompt);
 // Update bower, component, npm, README, etc. in one step
 
 function bumpVersionInAllFiles(opts) {
+
+  // TODO allow for finding this if the user is in a sub-dir
+  var topLevelDir = process.cwd();
+
   opts = opts || {};
   opts.require = opts.require || [];
   opts.require = opts.require.concat([
-    //'gulp',
-    //'gulp-bump',
     //'highland',
-    'JSONStream',
-    //'gulp-regex-replace',
-    './package.json'
+    'JSONStream'
   ]);
 
-  opts.metadataFiles = opts.metadataFiles || ['./package.json'];
+  opts.metadataFiles = opts.metadataFiles || [topLevelDir + '/package.json'];
 
   var cache = {};
 
   for (var key in require.cache) {
     cache[key] = true;
   }
+
+  var newVersion = opts.newVersion;
 
   function clearCache() {
     for (var key in require.cache) {
@@ -43,27 +46,36 @@ function bumpVersionInAllFiles(opts) {
     });
   }
 
-  var oldPackageJson = require(resolveFrom(process.cwd(), './package.json'));
-  //var oldVersion = oldPackageJson.version;
-  // TODO these is just for testing below
+  var oldPackageJson = require(resolveFrom(topLevelDir, './package.json'));
+  var oldVersion = oldPackageJson.version;
 
-  //var oldVersion = '2.0.0-alpha.2';
-  var oldVersion = '2.0.0';
+  var newVersionSource = Rx.Observable.if(
+    function() {
+      return newVersion;
+    },
+    Rx.Observable.return(newVersion),
+    getNewVersion(oldVersion)
+  );
 
-  //var oldVersion = '2.0.1';
-  //var oldVersion = '2.0.1-rc.0';
-  //var oldVersion = '2.0.1-alpha.0';
+  function bumpPackageJson(oldVersion, newVersion) {
+    var fs = require('fs');
+    var JSONStream = require('JSONStream');
 
-  //var oldVersion = '2.1.0';
-  //var oldVersion = '2.1.0-alpha.0';
-  getNewVersion(oldVersion)
-    .subscribe(function(updatedVersion) {
-      console.log('updated from ' + oldVersion + ' to ' + updatedVersion);
+    fs.createReadStream('./package.json')
+      .pipe(JSONStream.parse('*'))
+      .pipe(process.stdout);
+
+  }
+
+  newVersionSource
+    .flatMap(function(newVersion) {
+      return newVersion;
+    })
+    .subscribe(function(newVersion) {
+      console.log('     Updated from ' + oldVersion + ' to ' + newVersion);
     }, function(err) {
       throw err;
     });
 }
-
-bumpVersionInAllFiles();
 
 module.exports = bumpVersionInAllFiles;
