@@ -8,13 +8,24 @@ var Rx = require('rx');
 var RxNode = require('rx-node');
 
 function bumpPackageJson(oldVersion, newVersion) {
-  //var stream = rxFs.readFile('./package.json')
+  //var dataSource = rxFs.readFile('./package.json')
   //*
-  var stream = Rx.Observable.fromEvent(hyperquest(
-      'https://publicdata-weather.firebaseio.com/sanfrancisco\.json'), 'data');
+  var stream = hyperquest('https://publicdata-weather.firebaseio.com/sanfrancisco\.json');
+  var endSource = Rx.Observable.fromEvent(stream, 'end');
+  var dataSource = Rx.Observable.fromEvent(stream, 'data')
+    .takeUntil(endSource);
+  /*
+  var dataSource = Rx.Observable.fromEvent(stream, 'data')
+    .takeUntil(endSource)
+    .concat(Rx.Observable.return('end'));
   //*/
 
-  stream
+  Rx.Observable.fromEvent(stream, 'end')
+    .subscribe(function(end) {
+      console.log('end');
+    });
+
+  dataSource
     /*
     .concatMap(rxJSONStream.parse('*', function(value) {
       return value;
@@ -36,15 +47,25 @@ function bumpPackageJson(oldVersion, newVersion) {
     //.concatMap(rxJSONStream.parse('*.data'))
     .concatMap(rxJSONStream.parse(true))
     //*/
-    //.flatMap(rxJSONStream.stringify())
+    //.concatMap(rxJSONStream.stringify())
+    /*
     .concatMap(function(data) {
       console.log('concatMaprunlength:' + JSON.stringify(data).length);
       return rxJSONStream.stringifyObject()(data);
     })
+    //*/
     //.flatMap(rxJSONStream.stringifyObject())
+    //.concatMap(rxJSONStream.stringifyObject())
+    //.concatMap(rxJSONStream.stringify())
     .subscribe(function(data) {
-      console.log('subscribedata');
+      console.log('**');
+      console.log('**');
+      console.log('** subscribed data');
       console.log(data);
+      console.log('**');
+      console.log('**');
+      //console.log(JSON.parse(data));
+      //console.log(JSON.stringify(JSON.parse(data)), null, '  ');
     }, function(err) {
       throw err;
     }, function() {
