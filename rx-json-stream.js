@@ -28,14 +28,8 @@ rxJSONStream.parse = function(pattern, mapFilterFunction) {
     console.log('stream end');
   });
   //var jsonSource = Rx.Observable.fromEvent(stream, 'data');
-  //var jsonSource = RxNode.fromReadableStream(stream);
-  //*
   var jsonSource = RxNode.fromReadableStream(stream)
     .takeUntil(Rx.Observable.timer(0));
-  //*/
-  /*
-  var jsonSource = RxNode.fromReadableStream(stream)
-    .takeUntil(Rx.Observable.timer(5000));
   //*/
 
   return function(x, idx, source) {

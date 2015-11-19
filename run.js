@@ -14,16 +14,6 @@ function bumpPackageJson(oldVersion, newVersion) {
   var endSource = Rx.Observable.fromEvent(stream, 'end');
   var dataSource = Rx.Observable.fromEvent(stream, 'data')
     .takeUntil(endSource);
-  /*
-  var dataSource = Rx.Observable.fromEvent(stream, 'data')
-    .takeUntil(endSource)
-    .concat(Rx.Observable.return('end'));
-  //*/
-
-  Rx.Observable.fromEvent(stream, 'end')
-    .subscribe(function(end) {
-      console.log('end');
-    });
 
   dataSource
     /*
