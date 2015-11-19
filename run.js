@@ -36,7 +36,14 @@ function bumpPackageJson(oldVersion, newVersion) {
     //.concatMap(rxJSONStream.parse('*.data'))
     .concatMap(rxJSONStream.parse(true))
     //*/
+    //.flatMap(rxJSONStream.stringify())
+    .concatMap(function(data) {
+      console.log('concatMaprunlength:' + JSON.stringify(data).length);
+      return rxJSONStream.stringifyObject()(data);
+    })
+    //.flatMap(rxJSONStream.stringifyObject())
     .subscribe(function(data) {
+      console.log('subscribedata');
       console.log(data);
     }, function(err) {
       throw err;
