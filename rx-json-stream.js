@@ -66,12 +66,11 @@ rxJSONStream.stringify = function(open, sep, close) {
 
 rxJSONStream.stringifyObject = function(open, sep, close) {
   var stream = JSONStream.stringifyObject(open, sep, close);
-  //var stream = JSONStream.stringifyObject();
   var jsonSource = RxNode.fromWritableStream(stream);
   return function(x, idx, source) {
     console.log('xbeforestringifyobjectwritelength:' + JSON.stringify(x).length);
-    stream.write(['key', x]);
-    //stream.write(x);
+    //stream.write(['key', x]);
+    stream.write(x);
     return jsonSource.map(function(result) {
       console.log('result length:' + JSON.stringify(result).length);
       return result;
