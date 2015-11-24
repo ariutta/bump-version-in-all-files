@@ -1,7 +1,8 @@
 var _ = require('lodash');
 var fs = require('fs');
+var JSONStream = require('JSONStream');
 var Rx = require('rx');
-var RxNode = require('rx-node');
+var RxNode = require('./rx-node-plus.js');
 
 // TODO not currently handling 'this' and prototypes
 function rxifyNodeObject(inputObject) {
@@ -12,7 +13,7 @@ function rxifyNodeObject(inputObject) {
         if (key.indexOf('Sync') > -1) {
           accumulator[key] = value;
         } else if (key.indexOf('Stream') > -1) {
-          accumulator[key] = value;
+          //accumulator[key] = value;
           /*
           if (key.indexOf('Write') > -1) {
             accumulator[key] = RxNode.fromWritableStream(value);
@@ -33,4 +34,35 @@ function rxifyNodeObject(inputObject) {
     }, {});
 }
 
-module.exports = rxifyNodeObject(fs);
+var rxFs = rxifyNodeObject(fs);
+
+rxFs.createReadObservable = function(path, options) {
+  var stream = fs.createReadStream(path, options);
+  var parsedStream;
+
+  options = options || {};
+  var json = options.json;
+  if (json) {
+    parsedStream = stream
+      .pipe(JSONStream.parse(json));
+  } else {
+    parsedStream = stream;
+  }
+  return RxNode.fromReadableStream(parsedStream);
+};
+
+rxFs.createWriteObservable = function(path, options) {
+  var writeStream = fs.createWriteStream(path, options);
+
+  return function(x, idx, source) {
+    var output;
+    if (_.isPlainObject(x) || _.isArray(x)) {
+      output = JSON.stringify(x, null, '  ');
+    } else {
+      output = x;
+    }
+    writeStream.write(output);
+  };
+};
+
+module.exports = rxFs;

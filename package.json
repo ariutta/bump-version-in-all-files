@@ -22,12 +22,14 @@
   "homepage": "https://github.com/ariutta/bump-version-in-all-files#readme",
   "dependencies": {
     "JSONStream": "^1.0.6",
+    "highland": "^2.5.1",
     "inquirer": "^0.11.0",
     "lodash": "^3.10.1",
     "resolve-from": "^1.0.1",
     "rx": "^4.0.6",
     "rx-node": "^1.0.1",
-    "semver": "^5.0.3"
+    "semver": "^5.0.3",
+    "transducers-js": "^0.4.174"
   },
   "devDependencies": {
     "bdd-stdin": "^0.2.0",

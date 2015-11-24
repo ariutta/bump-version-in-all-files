@@ -1,123 +1,62 @@
-var _ = require('lodash');
 var JSONStream = require('JSONStream');
 var Rx = require('rx');
 var RxNode = require('rx-node');
 
 var rxJSONStream = {};
 
-/*
-rxJSONStream.parse = function(pattern, mapFilterFunction) {
-  var stream = JSONStream.parse(pattern, mapFilterFunction);
-  var jsonSource = Rx.Observable.fromEvent(stream, 'data');
-  return function(x, idx, source) {
-    console.log('x');
-    //console.log(x);
-    stream.write(x);
-    return jsonSource.map(function(result) {
-      console.log('result length' + JSON.stringify(result).length);
-      return result;
-    });
-  };
-};
-//*/
-
-rxJSONStream.parse = function(pattern, mapFilterFunction) {
-  var stream = JSONStream.parse(pattern, mapFilterFunction);
-
-  stream.on('end', function() {
-    console.log('stream end');
-  });
-  //var jsonSource = Rx.Observable.fromEvent(stream, 'data');
-  var jsonSource = RxNode.fromReadableStream(stream)
-    .takeUntil(Rx.Observable.timer(0));
-  //*/
-
-  return function(x, idx, source) {
-    /*
-    source.subscribeOnCompleted(
-      function() {
-        console.log('parse Completed');
-      });
-    //*/
-
-    if (x !== 'end') {
-      stream.write(x);
-    } else {
-      stream.end();
-    }
-    return jsonSource;
-  };
-};
-
-/*
-rxJSONStream.stringify = function(open, sep, close) {
-  var stream = JSONStream.stringify(open, sep, close);
-  var jsonSource = Rx.Observable.fromEvent(stream, 'data');
-  return function(x, idx, source) {
-    stream.write(x);
-    return jsonSource;
-  };
-};
-//*/
-
-//*
-rxJSONStream.stringify = function(open, sep, close) {
-  var stream = JSONStream.stringify();
-  //var jsonSource = Rx.Observable.fromEvent(stream, 'data');
-  var jsonSource = RxNode.fromWritableStream(stream);
-  return function(x, idx, source) {
-    console.log('*');
-    console.log('* xlength before writing to stringify:' + JSON.stringify(x).length);
-    console.log('*');
-    stream.write(x);
-    return jsonSource.map(function(result) {
-      console.log('*');
-      console.log('* xlength after being stringified:' + result.length);
-      console.log('*');
-      return result;
-    });
-  };
-};
-//*/
-
-/*
-rxJSONStream.stringify = function(open, sep, close) {
-  var stream = JSONStream.stringify();
-  //var jsonSource = Rx.Observable.fromEvent(stream, 'data');
-  var jsonSource = RxNode.fromWritableStream(stream);
-  return function(x, idx, source) {
-    console.log('xbeforestringifywritelength:' + JSON.stringify(x).length);
-    RxNode.writeToStream(source, stream);
-    //stream.write(x);
-    return jsonSource.map(function(result) {
-      console.log('xstringify52length' + JSON.stringify(result).length);
-      return result;
-    });
-  };
-};
-//*/
-
-/*
-rxJSONStream.stringify = function(open, sep, close) {
-  var stream = JSONStream.stringify(open, sep, close);
+function fromWritableStreamLackingEnd(stream) {
   return RxNode.fromWritableStream(stream);
-};
-//*/
+    // TODO the sources for the rxJSONStream methods should somehow pass end
+    // events, but currently that isn't happening, so we need this kludge.
+    // Refactor the rxJSONStream methods to end the stream when the source ends.
+    // (may need to change something so that the sources pass an end event or
+    // so that the sources even HAVE end events, bc I'm not sure they do at present).
+    //.takeUntil(Rx.Observable.timer(0));
+}
 
-rxJSONStream.stringifyObject = function(open, sep, close) {
-  var stream = JSONStream.stringifyObject(open, sep, close);
-  var jsonSource = RxNode.fromWritableStream(stream);
-  return function(x, idx, source) {
-    var keys = _.keys(x);
-    console.log('keys');
-    console.log(keys);
-    console.log('xbeforestringifyobjectwritelength:' + JSON.stringify(x).length);
-    stream.write(['key', x]);
-    //stream.write(x);
-    return jsonSource.map(function(result) {
-      console.log('result length:' + JSON.stringify(result).length);
-      return result;
+rxJSONStream.parse = function(pattern, mapFilterFunction) {
+  var stream = JSONStream.parse(pattern, mapFilterFunction);
+  var jsonSource = RxNode.fromReadableStream(stream);
+
+  return function(source) {
+    RxNode.writeToStream(source, stream);
+    /*
+    source.subscribe(function(x) {
+      stream.write(x);
+    }, function(err) {
+      stream.write(err);
+    }, function() {
+      stream.end();
     });
+    //*/
+    return jsonSource;
+  };
+};
+
+rxJSONStream.stringify = function(open, sep, close) {
+  close = close || '\n]\n';
+  var stream = JSONStream.stringify(open, sep, close);
+  var jsonSource = fromWritableStreamLackingEnd(stream)
+    .concat(Rx.Observable.return(close));
+  return function(x, idx, source) {
+    stream.write(x);
+    return jsonSource;
+  };
+};
+
+// NOTE this is the name from JSONStream, but a better name
+// would be something like stringifyKeyValuePair, because
+// if you really want to stringify an object, you need to
+// run this first:
+// .flatMap(Rx.Observable.pairs)
+rxJSONStream.stringifyObject = function(open, sep, close) {
+  close = close || '\n}\n';
+  var stream = JSONStream.stringifyObject(open, sep, close);
+  var jsonSource = fromWritableStreamLackingEnd(stream)
+    .concat(Rx.Observable.return(close));
+  return function(x, idx, source) {
+    stream.write(x);
+    return jsonSource;
   };
 };
 
