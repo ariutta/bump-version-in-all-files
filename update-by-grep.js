@@ -78,6 +78,20 @@ grepObservable(versionNumberRe, './', {
         return accumulator;
       }, []);
 
+    /*
+    var chunkStringsByFileByLineIndex = data.reduce(function(accumulator, item) {
+      var file = item.file;
+      var lineIndexString = String(item.lineNumber - 1);
+      var chunkStrings = item.chunks.map(function(chunk) {
+        return chunk.str;
+      });
+      accumulator[file] = accumulator[file] || {};
+      accumulator[file][lineIndexString] = accumulator[file][lineIndexString] || {};
+      accumulator[file][lineIndexString].chunkStrings = chunkStrings;
+      accumulator[file][lineIndexString].updated = false;
+      return accumulator;
+    }, {});
+    //*/
     var chunkStringsByFileByLineIndex = data.reduce(function(accumulator, item) {
       var file = item.file;
       var lineIndexString = String(item.lineNumber - 1);
