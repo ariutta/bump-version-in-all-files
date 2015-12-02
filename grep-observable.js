@@ -2,23 +2,62 @@
 // and https://github.com/reepush/grepy
 
 var _ = require('lodash');
+var path = require('path');
 var stripAnsi = require('strip-ansi');
 var Rx = require('rx');
 
-var grep = function(what, where, args, callback) {
+// from http://www.bennadel.com/blog/
+//      2664-cloning-regexp-regular-expression-objects-in-javascript.htm
+/**
+* I clone the given RegExp object, and ensure that the given flags exist on
+* the clone. The injectFlags parameter is purely additive - it cannot remove
+* flags that already exist on the
+*
+* @input RegExp - I am the regular expression object being cloned.
+* @injectFlags String( Optional ) - I am the flags to enforce on the clone.
+*/
+function cloneRegExp(input, injectFlags) {
+  var pattern = input.source;
+  var flags = '';
+  // Make sure the parameter is a defined string - it will make the conditional
+  // logic easier to read.
+  injectFlags = (injectFlags || '');
+  // Test for global.
+  if (input.global || (/g/i).test(injectFlags)) {
+    flags += 'g';
+  }
+  // Test for ignoreCase.
+  if (input.ignoreCase || (/i/i).test(injectFlags)) {
+    flags += 'i';
+  }
+  // Test for multiline.
+  if (input.multiline || (/m/i).test(injectFlags)) {
+    flags += 'm';
+  }
+  // Return a clone with the additive flags.
+  return (new RegExp(pattern, flags));
+}
+
+var grep = function(reJS, where, args, callback) {
   var excludeList = args.exclude;
   excludeList = _.isArray(excludeList) ? excludeList : [excludeList];
   var excludeDirList = args.excludeDir;
   excludeDirList = _.isArray(excludeDirList) ? excludeDirList : [excludeDirList];
 
-  what = what.replace(/\\/g, '\\\\');
-  var whatForCommandLine = '\'' + what + '\'';
-  var whatForJS = what.replace(/\\\\{/g, '{').replace(/\\\\}/g, '}');
+  // Clone the regular expression object, but ensure "g" (global) flag is set
+  // (even if it was not set on the given RegExp instance).
+  var reJSGlobal = cloneRegExp(reJS, 'g');
+
+  // TODO:
+  // 1) remove flags
+  // 2) might need to add backslashes to curly braces when converting
+  //    from JS RegExp to egrep RegExp
+  var reEgrep = '\'' + reJS.source + '\'';
 
   var commandString = [
     'grep',
     '-ErnI',
-    whatForCommandLine,
+    reEgrep,
     where,
   ]
   .concat(
@@ -50,7 +89,8 @@ var grep = function(what, where, args, callback) {
 
     var parsedLines = grepResultLines.map(function(grepResultLine) {
       var grepResultLineComponents = grepResultLine.split(':'); //file:lineNumber:line
-      var filename = grepResultLineComponents[0];
+      // "file" is a string representing the absolute path to the file
+      var file = path.resolve(grepResultLineComponents[0]);
       var lineNumber = grepResultLineComponents[1];
       grepResultLineComponents.shift();
       grepResultLineComponents.shift();
@@ -59,7 +99,7 @@ var grep = function(what, where, args, callback) {
 
       /*
       return {
-        filename: filename,
+        file: file,
         lineNumber: lineNumber,
         line: line
       };
@@ -68,8 +108,7 @@ var grep = function(what, where, args, callback) {
       //*
       var exec;
       var matches = [];
-      var re = new RegExp(whatForJS, 'g');
-      while ((exec = re.exec(line)) !== null) {
+      while ((exec = reJSGlobal.exec(line)) !== null) {
         matches.push({
           start: exec.index,
           length: exec[0].length
@@ -101,8 +140,8 @@ var grep = function(what, where, args, callback) {
       }
 
       return {
-        filename: filename,
-        lineNumber: lineNumber,
+        file: file,
+        lineNumber: parseFloat(lineNumber),
         line: line,
         chunks: chunks
       };

@@ -4,146 +4,196 @@ var exec = require('child_process').exec;
 var grepObservable = require('./grep-observable.js');
 var inquirer = require('inquirer');
 var Rx = require('rx');
+var updateFileLines = require('./lib/update-file-lines.js');
 
 var newVersion = '3.2.1';
 
-// Pattern to find version numbers, including the pre-release suffix if present.
+// Regular expression to find version numbers, including the pre-release suffix if present.
 // It should use syntax compatible with both egrep and JS (they differ in some ways).
-// If it's not possible to use the same syntax, use the syntax for egrep and convert
-// it to the syntax for JS when needed.
-var versionNumberPattern = '[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)(\.[0-9])?)?';
+// If it's not possible to use the same syntax, use the syntax for JS and convert
+// it to the syntax for egrep when needed.
+var versionNumberRe = /[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)(\.[0-9])?)?/;
+//var versionNumberPatternOrig = '[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)(\.[0-9])?)?';
+//var versionNumberPattern = '[0-9]+\\.[0-9]+\\.[0-9]+(-(alpha|beta|rc)(\\.[0-9])?)?';
 
-grepObservable(versionNumberPattern, './', {
+grepObservable(versionNumberRe, './', {
   exclude: [
-    'package.json'
+    'package.json',
+    'update-by-grep.js'
   ],
   excludeDir: [
     '.git',
-    'node_modules'
+    'node_modules',
+    'lib'
   ]
 })
   .flatMap(function(data) {
     var prompts = data
       .reduce(function(accumulator, item) {
-        var filename = item.filename;
+        var file = item.file;
         var line = item.line;
         var lineNumber = item.lineNumber;
         var chunks = item.chunks;
         accumulator = accumulator.concat(
-          chunks.map(function(chunk, i) {
-            if (!chunk.matched) {
-              return false;
-            }
-            var match = chunk.str;
-            var promptChunks = _.clone(chunks);
-            promptChunks[i].str = colors.yellow.bold(_.clone(match));
-            var highlightedLine = promptChunks.map(function(promptChunk) {
-              return promptChunk.str;
-            }).join('');
+          _.pairs(chunks)
+            .map(function(chunkPair) {
+              var index = parseFloat(chunkPair[0]);
+              var chunk = chunkPair[1];
+              return [index, chunk];
+            })
+            .filter(function(chunkPair) {
+              var chunk = chunkPair[1];
+              return chunk.matched;
+            })
+            .map(function(chunkPair) {
+              var index = chunkPair[0];
+              var chunk = chunkPair[1];
+              var match = chunk.str;
 
-            /*
-            var trueChunks = _.clone(chunks);
-            trueChunks[i].str = newVersion;
-            var trueLine = trueChunks.map(function(trueChunk) {
-              return trueChunk.str;
-            }).join('');
+              var promptChunkStrings = chunks.map(function(originalChunk) {
+                return originalChunk.str;
+              });
+              promptChunkStrings[index] = colors.yellow.bold(match);
 
-            var falseLine = chunks.map(function(falseChunk) {
-              return falseChunk.str;
-            }).join('');
-            //*/
+              var highlightedLine = promptChunkStrings.join('');
 
-            return {
-              type: 'confirm',
-              name: {
-                filename: filename,
-                lineNumber: lineNumber,
-                matchIndex: i
-              },
-              message: 'Replace ' + colors.bold(match) + ' with ' + colors.bold(newVersion) +
-                    ' in ' + colors.bold(filename) + ', line ' + lineNumber +
-                    ', as highlighted below?\n' +
-                '\n' +
-                '    ' + highlightedLine + '\n' +
-                '\n',
-              default: true
-            };
-          })
-          .filter(function(x) {
-            return x;
-          })
+              return {
+                type: 'confirm',
+                name: {
+                  file: file,
+                  lineIndex: lineNumber - 1,
+                  str: match,
+                  chunkIndex: index
+                },
+                message: 'Replace ' + colors.bold(match) + ' with ' + colors.bold(newVersion) +
+                      ' in ' + colors.bold(file) + ', line ' + lineNumber +
+                      ', as highlighted below?\n' +
+                  '\n' +
+                  '    ' + highlightedLine + '\n' +
+                  '\n',
+                default: true
+              };
+            })
         );
         return accumulator;
       }, []);
 
-    return inquirer.prompt(prompts).process
-      .filter(function(response) {
-        console.log('response');
-        console.log(response);
-        return response.answer;
-      })
-      .map(function(response) {
-        console.log('response');
-        console.log(response);
-        return response.name;
-      })
-      .map(function(name) {
-        var correspondingItem = _.find(data, function(item) {
-          return (item.filename === name.filename) &&
-            (item.lineNumber === name.lineNumber);
-        });
-
-        if (correspondingItem) {
-          correspondingItem.chunks[name.matchIndex].str = newVersion;
-        }
-
-        return data;
+    var chunkStringsByFileByLineIndex = data.reduce(function(accumulator, item) {
+      var file = item.file;
+      var lineIndexString = String(item.lineNumber - 1);
+      var chunkStrings = item.chunks.map(function(chunk) {
+        return chunk.str;
       });
-      /*
-      .reduce(function(accumulator, name) {
-        var correspondingItem = _.find(accumulator, function(item) {
-          return (item.filename === name.filename) &&
-            (item.lineNumber === name.lineNumber);
-        });
-
-        if (correspondingItem) {
-          correspondingItem.chunks[name.matchIndex] = newVersion;
-        }
-
-        return accumulator;
-      }, data);
-      //*/
+      accumulator[file] = accumulator[file] || {};
+      accumulator[file][lineIndexString] = accumulator[file][lineIndexString] || {};
+      accumulator[file][lineIndexString].chunkStrings = chunkStrings;
+      accumulator[file][lineIndexString].updated = false;
+      return accumulator;
+    }, {});
+    return Rx.Observable.return(chunkStringsByFileByLineIndex).concat(
+      inquirer.prompt(prompts).process
+        .filter(function(response) {
+          return response.answer;
+        })
+        .map(function(response) {
+          var item = response.name;
+          item.str = newVersion;
+          return item;
+        })
+    );
   })
-  .last()
+  .reduce(function(accumulator, item) {
+    /*
+    var correspondingItem = _.find(accumulator, function(item) {
+      return (item.file === name.file) &&
+        (item.lineNumber === name.lineNumber);
+    });
+    //*/
+
+    var file = item.file;
+    var lineIndexString = item.lineIndex.toString();
+    console.log('accumulator');
+    console.log(accumulator);
+    //console.log(JSON.stringify(accumulator, null, '  '));
+    var lineDetails = accumulator[file][lineIndexString];
+    lineDetails.updated = true;
+    console.log('lineDetails118');
+    console.log(JSON.stringify(lineDetails, null, '  '));
+    var chunkStrings = lineDetails.chunkStrings;
+    console.log('chunkStrings120');
+    console.log(JSON.stringify(chunkStrings, null, '  '));
+    chunkStrings[item.chunkIndex] = item.str;
+
+    return accumulator;
+  })
   .flatMap(function(data) {
-    console.log('data');
+    console.log('data119');
     console.log(data);
-    console.log('groupBy');
-    console.log(_.pairs(_.groupBy(data, 'filename')));
-    return Rx.Observable.from(_.pairs(_.groupBy(data, 'filename')));
+    return Rx.Observable.from(_.pairs(_.groupBy(data, 'file')));
   })
+  /*
   .map(function(dataByFilenamePair) {
-    return dataByFilenamePair[1].reduce(function(accumulator, details) {
-      var newLine = details.chunks.map(function(chunk) {
+    var file = dataByFilenamePair[0];
+    var detailsByLineList = dataByFilenamePair[1];
+
+    var lastUpdatedLineNumber = 0;
+
+    var updatedLines = detailsByLineList.reduce(function(accumulator, lineDetails) {
+      var lineNumber = lineDetails.lineNumber;
+
+      var text = lineDetails.chunks.map(function(chunk) {
         return chunk.str;
       })
       .join('');
 
-      accumulator.push({
-        line: newLine,
-        lineNumber: details.lineNumber
-      });
+      //accumulator[lineNumber - 1] = text;
+
+      var updatedLine = {
+        text: text,
+        number: lineNumber
+      };
+      accumulator.push(updatedLine);
 
       return accumulator;
     }, []);
+
+    return {
+      file: file,
+      updatedLines: updatedLines
+    };
+  })
+  //*/
+  .map(function(dataByFilenamePair) {
+    var file = dataByFilenamePair[0];
+    var detailsByLineList = dataByFilenamePair[1];
+
+    var lastUpdatedLineNumber = 0;
+
+    var updatedTextByLineMap = detailsByLineList.reduce(function(accumulator, lineDetails) {
+      var lineNumber = lineDetails.lineNumber;
+
+      var text = lineDetails.chunks.map(function(chunk) {
+        return chunk.str;
+      })
+      .join('');
+
+      accumulator[lineNumber - 1] = text;
+
+      return accumulator;
+    }, {});
+
+    return {
+      file: file,
+      updatedTextByLineMap: updatedTextByLineMap
+    };
   })
   /*
   .flatMap(function(results) {
     var chunks = results.reduce(function(accumulator, result) {
-      var filename = result.filename;
+      var file = result.file;
       var lineNumber = result.lineNumber;
       var chunkDetails = result.chunks.map(function(chunk) {
-        chunk.filename = filename;
+        chunk.file = file;
         chunk.lineNumber = lineNumber;
         return chunk;
       });
@@ -168,7 +218,8 @@ grepObservable(versionNumberPattern, './', {
         return {
           type: 'confirm',
           name: chunk,
-          message: 'Replace ' + potentialOlderVersion + ' with ' + newVersion + ' in text below?\n' +
+          message: 'Replace ' + potentialOlderVersion + ' with ' + newVersion +
+                      ' in text below?\n' +
             '\n' +
             '    ' + str.replace(potentialOlderVersion,
                          colors.yellow.bold(potentialOlderVersion)) + '\n' +
@@ -180,6 +231,11 @@ grepObservable(versionNumberPattern, './', {
     return inquirer.prompt(prompts).process;
   })
   //*/
+  .flatMap(function(fileAndUpdatesByLine) {
+    console.log('fileAndUpdatesByLine');
+    console.log(fileAndUpdatesByLine);
+    return updateFileLines(fileAndUpdatesByLine.file, fileAndUpdatesByLine.updatedTextByLineMap);
+  })
   .subscribe(function(result) {
     /*
     var currentLine = result.name;
@@ -188,6 +244,7 @@ grepObservable(versionNumberPattern, './', {
     //*/
     console.log('result');
     console.log(result);
+    //updateFileLines()
   }, function(err) {
     throw err;
   }, function() {
@@ -203,7 +260,7 @@ grepObservable(versionNumberPattern, './', {
 //  var parsedLines = lines.map(function(line) {
 //    var lineComponents = line.split(' ');
 //    return {
-//      path: lineComponents[0],
+//      file: lineComponents[0],
 //      value: lineComponents[1],
 //    };
 //  });
@@ -232,7 +289,8 @@ grepObservable(versionNumberPattern, './', {
 //      return {
 //        type: 'confirm',
 //        name: line,
-//        message: 'Replace ' + potentialOlderVersion + ' with ' + newVersion + ' in line below?\n' +
+//        message: 'Replace ' + potentialOlderVersion + ' with ' +
+//                    newVersion + ' in line below?\n' +
 //          '\n' +
 //          '    ' + line.replace(potentialOlderVersion,
 //                       colors.yellow.bold(potentialOlderVersion)) + '\n' +
