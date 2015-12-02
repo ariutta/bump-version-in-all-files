@@ -28,9 +28,10 @@ grepObservable(versionNumberRe, './', {
   ]
 })
   .flatMap(function(data) {
+    var file = data[0].file;
     var prompts = data
       .reduce(function(accumulator, item) {
-        var file = item.file;
+        //var file = item.file;
         var line = item.line;
         var lineNumber = item.lineNumber;
         var chunks = item.chunks;
@@ -92,19 +93,23 @@ grepObservable(versionNumberRe, './', {
       return accumulator;
     }, {});
     //*/
-    var chunkStringsByFileByLineIndex = data.reduce(function(accumulator, item) {
-      var file = item.file;
-      var lineIndexString = String(item.lineNumber - 1);
-      var chunkStrings = item.chunks.map(function(chunk) {
-        return chunk.str;
-      });
-      accumulator[file] = accumulator[file] || {};
-      accumulator[file][lineIndexString] = accumulator[file][lineIndexString] || {};
-      accumulator[file][lineIndexString].chunkStrings = chunkStrings;
-      accumulator[file][lineIndexString].updated = false;
-      return accumulator;
-    }, {});
-    return Rx.Observable.return(chunkStringsByFileByLineIndex).concat(
+    var output = {
+      file: file,
+      lineDetailsMap: {}
+    };
+    return Rx.Observable.return(
+      data.reduce(function(accumulator, item) {
+        var lineIndexString = String(item.lineNumber - 1);
+        var chunkStrings = item.chunks.map(function(chunk) {
+          return chunk.str;
+        });
+        var lineDetailsMap = accumulator.lineDetailsMap;
+        var lineDetails = lineDetailsMap[lineIndexString] = lineDetailsMap[lineIndexString] || {};
+        lineDetails.chunkStrings = chunkStrings;
+        lineDetails.updated = false;
+        return accumulator;
+      }, output)
+    ).concat(
       inquirer.prompt(prompts).process
         .filter(function(response) {
           return response.answer;
@@ -117,33 +122,30 @@ grepObservable(versionNumberRe, './', {
     );
   })
   .reduce(function(accumulator, item) {
-    /*
-    var correspondingItem = _.find(accumulator, function(item) {
-      return (item.file === name.file) &&
-        (item.lineNumber === name.lineNumber);
-    });
-    //*/
-
-    var file = item.file;
     var lineIndexString = item.lineIndex.toString();
-    console.log('accumulator');
-    console.log(accumulator);
-    //console.log(JSON.stringify(accumulator, null, '  '));
-    var lineDetails = accumulator[file][lineIndexString];
+    var lineDetails = accumulator.lineDetailsMap[lineIndexString];
     lineDetails.updated = true;
-    console.log('lineDetails118');
-    console.log(JSON.stringify(lineDetails, null, '  '));
     var chunkStrings = lineDetails.chunkStrings;
-    console.log('chunkStrings120');
-    console.log(JSON.stringify(chunkStrings, null, '  '));
     chunkStrings[item.chunkIndex] = item.str;
-
     return accumulator;
   })
   .flatMap(function(data) {
-    console.log('data119');
-    console.log(data);
-    return Rx.Observable.from(_.pairs(_.groupBy(data, 'file')));
+    var file = data.file;
+    var lineDetailsMap = data.lineDetailsMap;
+    var filteredLineMap = _.pairs(lineDetailsMap)
+      .filter(function(lineDetailsPair) {
+        return lineDetailsPair[1].updated;
+      })
+      .reduce(function(accumulator, lineDetailsPair) {
+        var lineIndexString = lineDetailsPair[0];
+        var lineDetails = lineDetailsPair[1];
+        var text = lineDetails.chunkStrings.join('');
+        accumulator[lineIndexString] = text;
+        return accumulator;
+      }, {});
+    console.log('filteredLineMap');
+    console.log(JSON.stringify(filteredLineMap, null, '  '));
+    return updateFileLines(file, filteredLineMap);
   })
   /*
   .map(function(dataByFilenamePair) {
@@ -177,6 +179,7 @@ grepObservable(versionNumberRe, './', {
     };
   })
   //*/
+  /*
   .map(function(dataByFilenamePair) {
     var file = dataByFilenamePair[0];
     var detailsByLineList = dataByFilenamePair[1];
@@ -201,6 +204,7 @@ grepObservable(versionNumberRe, './', {
       updatedTextByLineMap: updatedTextByLineMap
     };
   })
+  //*/
   /*
   .flatMap(function(results) {
     var chunks = results.reduce(function(accumulator, result) {
@@ -245,11 +249,13 @@ grepObservable(versionNumberRe, './', {
     return inquirer.prompt(prompts).process;
   })
   //*/
+  /*
   .flatMap(function(fileAndUpdatesByLine) {
     console.log('fileAndUpdatesByLine');
     console.log(fileAndUpdatesByLine);
     return updateFileLines(fileAndUpdatesByLine.file, fileAndUpdatesByLine.updatedTextByLineMap);
   })
+  //*/
   .subscribe(function(result) {
     /*
     var currentLine = result.name;
