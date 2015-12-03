@@ -5,6 +5,7 @@ var _ = require('lodash');
 var path = require('path');
 var stripAnsi = require('strip-ansi');
 var Rx = require('rx');
+var RxNode = require('rx-node-extra');
 
 // from http://www.bennadel.com/blog/
 //      2664-cloning-regexp-regular-expression-objects-in-javascript.htm
@@ -38,26 +39,21 @@ function cloneRegExp(input, injectFlags) {
   return (new RegExp(pattern, flags));
 }
 
-var grep = function(reJS, where, args, callback) {
+var grep = function(jsRE, where, args) {
   var excludeList = args.exclude;
   excludeList = _.isArray(excludeList) ? excludeList : [excludeList];
   var excludeDirList = args.excludeDir;
   excludeDirList = _.isArray(excludeDirList) ? excludeDirList : [excludeDirList];
 
-  // Clone the regular expression object, but ensure "g" (global) flag is set
-  // (even if it was not set on the given RegExp instance).
-  var reJSGlobal = cloneRegExp(reJS, 'g');
-
   // TODO:
   // 1) remove flags
   // 2) might need to add backslashes to curly braces when converting
-  //    from JS RegExp to egrep RegExp
-  var reEgrep = '\'' + reJS.source + '\'';
+  //    from JS RegExp to egrep RegExp pattern (passed as just a string)
+  var egrepREPattern = jsRE.source;
 
-  var commandString = [
-    'grep',
+  var commandLineArgs = [
     '-ErnI',
-    reEgrep,
+    egrepREPattern,
     where,
   ]
   .concat(
@@ -69,46 +65,39 @@ var grep = function(reJS, where, args, callback) {
     excludeList.map(function(exclude) {
       return '--exclude=' + exclude;
     })
-  )
-  .join(' ');
+  );
 
-  var exec = require('child_process').exec;
-
-  exec(commandString, function(err, stdin, stdout) {
-    if (err) {
+  return RxNode.spawn('grep', commandLineArgs)
+    .doOnError(function(err) {
       console.log('child processes failed with error code: ' + err.code);
-      return callback(err);
-    }
-
-    var list = {};
-
-    var grepResultLines = stdin.split('\n');
-
-    // remove last element (it’s an empty line)
-    grepResultLines.pop();
-
-    var parsedLines = grepResultLines.map(function(grepResultLine) {
+      throw err;
+    })
+    .flatMap(function(data) {
+      var dataAsString = data.toString();
+      return Rx.Observable.fromArray(dataAsString.split('\n'));
+    })
+    .filter(function(data) {
+      // remove last element (it’s an empty line)
+      return !!data;
+    })
+    .map(function(grepResultLine) {
       var grepResultLineComponents = grepResultLine.split(':'); //file:lineNumber:line
-      // "file" is a string representing the absolute path to the file
+      // 'file' is a string representing the absolute path to the file
       var file = path.resolve(grepResultLineComponents[0]);
       var lineNumber = grepResultLineComponents[1];
+      // remove file and lineNumber from grepResultsLineComponents array
+      // to leave just the line items.
       grepResultLineComponents.shift();
       grepResultLineComponents.shift();
       // the actual line in the file
       var line = grepResultLineComponents.join(':');
 
-      /*
-      return {
-        file: file,
-        lineNumber: lineNumber,
-        line: line
-      };
-      //*/
-
-      //*
+      // Clone the regular expression object, but ensure "g" (global) flag is set
+      // (even if it was not set on the given RegExp instance).
+      var jsREGlobal = cloneRegExp(jsRE, 'g');
       var exec;
       var matches = [];
-      while ((exec = reJSGlobal.exec(line)) !== null) {
+      while ((exec = jsREGlobal.exec(line)) !== null) {
         matches.push({
           start: exec.index,
           length: exec[0].length
@@ -145,11 +134,7 @@ var grep = function(reJS, where, args, callback) {
         line: line,
         chunks: chunks
       };
-      //*/
     });
-
-    return callback(null, parsedLines);
-  });
 };
 
-module.exports = Rx.Observable.fromNodeCallback(grep);
+module.exports = grep;
