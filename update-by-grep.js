@@ -29,33 +29,36 @@ var source = grepObservable(versionNumberRe, './', {
     ]
   })
   .pairwise()
-  .flatMap(function(pair) {
+  .flatMap(function(pair, index) {
     var previous = pair[0];
     var current = pair[1];
     if (previous.file === current.file) {
       return Rx.Observable.from(pair);
     } else {
-      return Rx.Observable.from([previous, boundary, current]);
+      return Rx.Observable.from([previous, boundary, boundary, current]);
     }
   })
   .publish().refCount();
 
 var openings = source
+  .pairwise()
   .filter(function(x) {
     return x === boundary;
   });
 
 source
+  .window(openings)
   .filter(function(x) {
     return x !== boundary;
   })
   .distinctUntilChanged(JSON.stringify)
-  .window(openings)
   .flatMap(function(obs) {
     return obs
       .pausableBuffered(pauser)
       .toArray()
-      .concatMap(function(data) {
+      .flatMap(function(data) {
+        console.log('data60');
+        console.log(data);
         pauser.onNext(false);
         var file = data[0].file;
         var prompts = data
