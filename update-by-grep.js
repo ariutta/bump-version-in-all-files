@@ -42,43 +42,10 @@ var source = grepObservable(versionNumberRe, './', {
 
 var openings = source
   .filter(function(x) {
-    console.log('================================= boundary =================================');
     return x === boundary;
   });
 
-/*
-var partitionedSource = source.partition(function(x) {
-  return x !== boundary;
-});
-
-var dataSource = partitionedSource[0];
-var openings = partitionedSource[1]
-  .map(function(x) {
-    console.log('================================= boundary =================================');
-    return x;
-  });
-//*/
-
 source
-  /*
-  .pairwise()
-  .flatMap(function(pair, index) {
-    var previous = pair[0];
-    var current = pair[1];
-    if (previous.file === current.file) {
-      if (index === 0) {
-        return Rx.Observable.from(pair);
-      } else {
-        return Rx.Observable.return(pair[1]);
-      }
-    } else {
-      return Rx.Observable.from(pair)
-        .filter(function(x) {
-          return x !== boundary;
-        });
-    }
-  })
-  //*/
   .filter(function(x) {
     return x !== boundary;
   })
@@ -89,8 +56,6 @@ source
       .pausableBuffered(pauser)
       .toArray()
       .concatMap(function(data) {
-        console.log('data');
-        console.log(data);
         pauser.onNext(false);
         var file = data[0].file;
         var prompts = data
