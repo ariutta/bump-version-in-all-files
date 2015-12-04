@@ -40,6 +40,18 @@ var source = grepObservable(versionNumberRe, './', {
   })
   .publish().refCount();
 
+var partitionedSource = source.partition(function(x) {
+  return x !== boundary;
+});
+
+var dataSource = partitionedSource[0];
+var openings = partitionedSource[1]
+  .map(function(x) {
+    console.log('================================= boundary =================================');
+    return x;
+  });
+
+/*
 var openings = source
   .filter(function(x) {
     return x === boundary;
@@ -48,11 +60,10 @@ var openings = source
     console.log('================================= boundary =================================');
     return x;
   });
+//*/
 
-source
-  .filter(function(x) {
-    return x !== boundary;
-  })
+dataSource
+  .distinctUntilChanged(JSON.stringify)
   /*
   .buffer(openings)
   .flatMapWithMaxConcurrent(1, function(data) {
@@ -141,17 +152,19 @@ source
   })
   //*/
   //*
-  //.window(openings)
+  .window(openings)
+  /*
   .window(function() {
     return openings;
   })
-  .pausable(pauser)
+  //*/
   //*/
   .flatMap(function(obs) {
-    console.log('obs150');
-    return obs.toArray().flatMap(function(data) {
+    console.log('obs163');
+    return obs.pausableBuffered(pauser).toArray().concatMap(function(data) {
       pauser.onNext(false);
-      console.log('************************* 126 **********************************');
+      console.log('************************* 166 **********************************');
+      console.log(data);
       var file = data[0].file;
       var prompts = data
         .reduce(function(accumulator, item) {
@@ -245,6 +258,7 @@ source
     });
   })
   .flatMap(function(data) {
+    pauser.onNext(true);
     console.log('data130');
     console.log(data);
     var file = data.file;
