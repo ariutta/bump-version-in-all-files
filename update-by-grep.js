@@ -14,7 +14,10 @@ var newVersion = '3.2.1';
 // it to the syntax for egrep when needed.
 var versionNumberRe = /[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)(\.[0-9])?)?/;
 
-grepObservable(versionNumberRe, './', {
+var pauser = new Rx.Subject();
+
+var boundary = 'bump-version-in-all-files-boundary';
+var source = grepObservable(versionNumberRe, './', {
     exclude: [
       'package.json',
       'update-by-grep.js'
@@ -25,108 +28,225 @@ grepObservable(versionNumberRe, './', {
       'lib'
     ]
   })
-  .groupBy(
-      function(x) {return x.file;},
-      function(x) {return x;}
-  )
-  .flatMap(function(obs) {
-    var fileSource = obs.first().map(function(item) {
-      return item.file;
-    });
-    var dataSource = obs.toArray();
-    return Rx.Observable.zip(fileSource, dataSource)
-      .flatMap(function(fileAndData) {
-        var file = fileAndData[0];
-        var data = fileAndData[1];
-        var prompts = data
-          .reduce(function(accumulator, item) {
-            //var file = item.file;
-            var line = item.line;
-            var lineNumber = item.lineNumber;
-            var chunks = item.chunks;
-            accumulator = accumulator.concat(
-              _.pairs(chunks)
-                .map(function(chunkPair) {
-                  var index = parseFloat(chunkPair[0]);
-                  var chunk = chunkPair[1];
-                  return [index, chunk];
-                })
-                .filter(function(chunkPair) {
-                  var chunk = chunkPair[1];
-                  return chunk.matched;
-                })
-                .map(function(chunkPair) {
-                  var index = chunkPair[0];
-                  var chunk = chunkPair[1];
-                  var match = chunk.str;
+  .pairwise()
+  .flatMap(function(pair) {
+    var previous = pair[0];
+    var current = pair[1];
+    if (previous.file === current.file) {
+      return Rx.Observable.from(pair);
+    } else {
+      return Rx.Observable.from([previous, boundary, current]);
+    }
+  })
+  .publish().refCount();
 
-                  var promptChunkStrings = chunks.map(function(originalChunk) {
-                    return originalChunk.str;
-                  });
-                  promptChunkStrings[index] = colors.yellow.bold(match);
+var openings = source
+  .filter(function(x) {
+    return x === boundary;
+  })
+  .map(function(x) {
+    console.log('================================= boundary =================================');
+    return x;
+  });
 
-                  var highlightedLine = promptChunkStrings.join('');
-
-                  return {
-                    type: 'confirm',
-                    name: {
-                      file: file,
-                      lineIndex: lineNumber - 1,
-                      str: match,
-                      chunkIndex: index
-                    },
-                    message: 'Replace ' + colors.bold(match) + ' with ' + colors.bold(newVersion) +
-                          ' in ' + colors.bold(file) + ', line ' + lineNumber +
-                          ', as highlighted below?\n' +
-                      '\n' +
-                      '    ' + highlightedLine + '\n' +
-                      '\n',
-                    default: true
-                  };
-                })
-            );
-            return accumulator;
-          }, []);
-
-        var output = {
-          file: file,
-          lineDetailsMap: {}
-        };
-        return Rx.Observable.return(
-          data.reduce(function(accumulator, item) {
-            var lineIndexString = String(item.lineNumber - 1);
-            var chunkStrings = item.chunks.map(function(chunk) {
-              return chunk.str;
-            });
-            var lineDetailsMap = accumulator.lineDetailsMap;
-            var lineDetails = lineDetailsMap[lineIndexString] =
-                lineDetailsMap[lineIndexString] || {};
-            lineDetails.chunkStrings = chunkStrings;
-            lineDetails.updated = false;
-            return accumulator;
-          }, output)
-        ).concat(
-          inquirer.prompt(prompts).process
-            .filter(function(response) {
-              return response.answer;
+source
+  .filter(function(x) {
+    return x !== boundary;
+  })
+  /*
+  .buffer(openings)
+  .flatMapWithMaxConcurrent(1, function(data) {
+    console.log('data');
+    console.log(data);
+    var file = data[0].file;
+    var prompts = data
+      .reduce(function(accumulator, item) {
+        //var file = item.file;
+        var line = item.line;
+        var lineNumber = item.lineNumber;
+        var chunks = item.chunks;
+        accumulator = accumulator.concat(
+          _.pairs(chunks)
+            .map(function(chunkPair) {
+              var index = parseFloat(chunkPair[0]);
+              var chunk = chunkPair[1];
+              return [index, chunk];
             })
-            .map(function(response) {
-              var item = response.name;
-              item.str = newVersion;
-              return item;
+            .filter(function(chunkPair) {
+              var chunk = chunkPair[1];
+              return chunk.matched;
+            })
+            .map(function(chunkPair) {
+              var index = chunkPair[0];
+              var chunk = chunkPair[1];
+              var match = chunk.str;
+
+              var promptChunkStrings = chunks.map(function(originalChunk) {
+                return originalChunk.str;
+              });
+              promptChunkStrings[index] = colors.yellow.bold(match);
+
+              var highlightedLine = promptChunkStrings.join('');
+
+              return {
+                type: 'confirm',
+                name: {
+                  file: file,
+                  lineIndex: lineNumber - 1,
+                  str: match,
+                  chunkIndex: index
+                },
+                message: 'Replace ' + colors.bold(match) + ' with ' +
+                            colors.bold(newVersion) +
+                      ' in ' + colors.bold(file) + ', line ' + lineNumber +
+                      ', as highlighted below?\n' +
+                  '\n' +
+                  '    ' + highlightedLine + '\n' +
+                  '\n',
+                default: true
+              };
             })
         );
-      })
-      .reduce(function(accumulator, item) {
-        var lineIndexString = item.lineIndex.toString();
-        var lineDetails = accumulator.lineDetailsMap[lineIndexString];
-        lineDetails.updated = true;
-        var chunkStrings = lineDetails.chunkStrings;
-        chunkStrings[item.chunkIndex] = item.str;
         return accumulator;
-      });
+      }, []);
+
+    var output = {
+      file: file,
+      lineDetailsMap: {}
+    };
+    return Rx.Observable.return(
+      data.reduce(function(accumulator, item) {
+        var lineIndexString = String(item.lineNumber - 1);
+        var chunkStrings = item.chunks.map(function(chunk) {
+          return chunk.str;
+        });
+        var lineDetailsMap = accumulator.lineDetailsMap;
+        var lineDetails = lineDetailsMap[lineIndexString] =
+            lineDetailsMap[lineIndexString] || {};
+        lineDetails.chunkStrings = chunkStrings;
+        lineDetails.updated = false;
+        return accumulator;
+      }, output)
+    ).concat(
+      inquirer.prompt(prompts).process
+        .filter(function(response) {
+          return response.answer;
+        })
+        .map(function(response) {
+          var item = response.name;
+          item.str = newVersion;
+          return item;
+        })
+    );
+  })
+  //*/
+  //*
+  //.window(openings)
+  .window(function() {
+    return openings;
+  })
+  .pausable(pauser)
+  //*/
+  .flatMap(function(obs) {
+    console.log('obs150');
+    return obs.toArray().flatMap(function(data) {
+      pauser.onNext(false);
+      console.log('************************* 126 **********************************');
+      var file = data[0].file;
+      var prompts = data
+        .reduce(function(accumulator, item) {
+          var file = item.file;
+          var line = item.line;
+          var lineNumber = item.lineNumber;
+          var chunks = item.chunks;
+          accumulator = accumulator.concat(
+            _.pairs(chunks)
+              .map(function(chunkPair) {
+                var index = parseFloat(chunkPair[0]);
+                var chunk = chunkPair[1];
+                return [index, chunk];
+              })
+              .filter(function(chunkPair) {
+                var chunk = chunkPair[1];
+                return chunk.matched;
+              })
+              .map(function(chunkPair) {
+                var index = chunkPair[0];
+                var chunk = chunkPair[1];
+                var match = chunk.str;
+
+                var promptChunkStrings = chunks.map(function(originalChunk) {
+                  return originalChunk.str;
+                });
+                promptChunkStrings[index] = colors.yellow.bold(match);
+
+                var highlightedLine = promptChunkStrings.join('');
+
+                return {
+                  type: 'confirm',
+                  name: {
+                    file: file,
+                    lineIndex: lineNumber - 1,
+                    str: match,
+                    chunkIndex: index
+                  },
+                  message: 'Replace ' + colors.bold(match) + ' with ' +
+                              colors.bold(newVersion) +
+                        ' in ' + colors.bold(file) + ', line ' + lineNumber +
+                        ', as highlighted below?\n' +
+                    '\n' +
+                    '    ' + highlightedLine + '\n' +
+                    '\n',
+                  default: true
+                };
+              })
+          );
+          return accumulator;
+        }, []);
+
+      var output = {
+        file: file,
+        lineDetailsMap: {}
+      };
+      return Rx.Observable.return(
+        data.reduce(function(accumulator, item) {
+          var lineIndexString = String(item.lineNumber - 1);
+          var chunkStrings = item.chunks.map(function(chunk) {
+            return chunk.str;
+          });
+          var lineDetailsMap = accumulator.lineDetailsMap;
+          var lineDetails = lineDetailsMap[lineIndexString] =
+              lineDetailsMap[lineIndexString] || {};
+          lineDetails.chunkStrings = chunkStrings;
+          lineDetails.updated = false;
+          return accumulator;
+        }, output)
+      ).concat(
+        inquirer.prompt(prompts).process
+          .filter(function(response) {
+            return response.answer;
+          })
+          .map(function(response) {
+            var item = response.name;
+            item.str = newVersion;
+            return item;
+          })
+      );
+    })
+    .reduce(function(accumulator, item) {
+      console.log('item for reducer at ln 231');
+      console.log(item);
+      var lineIndexString = item.lineIndex.toString();
+      var lineDetails = accumulator.lineDetailsMap[lineIndexString];
+      lineDetails.updated = true;
+      var chunkStrings = lineDetails.chunkStrings;
+      chunkStrings[item.chunkIndex] = item.str;
+      return accumulator;
+    });
   })
   .flatMap(function(data) {
+    console.log('data130');
+    console.log(data);
     var file = data.file;
     var lineDetailsMap = data.lineDetailsMap;
     var filteredLineMap = _.pairs(lineDetailsMap)
@@ -150,3 +270,5 @@ grepObservable(versionNumberRe, './', {
   }, function() {
     // complete
   });
+
+pauser.onNext(true);
