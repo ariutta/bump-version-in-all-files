@@ -4,7 +4,7 @@
 var _ = require('lodash');
 var path = require('path');
 var stripAnsi = require('strip-ansi');
-var Rx = require('rx');
+var Rx = require('./rx-split-on-change.js');
 var RxNode = require('rx-node-extra');
 
 // from http://www.bennadel.com/blog/
@@ -69,7 +69,7 @@ var grep = function(jsRE, where, args) {
 
   return RxNode.spawn('grep', commandLineArgs)
     .doOnError(function(err) {
-      console.log('child processes failed with error code: ' + err.code);
+      console.error('child processes failed with error code: ' + err.code);
       throw err;
     })
     .flatMap(function(data) {
