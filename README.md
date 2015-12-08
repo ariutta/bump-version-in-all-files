@@ -1,4 +1,4 @@
-# bump-version-in-all-files
+# semver-in-file-text-bumper
 Bump the version number in all appropriate files in the package.
 
 Currently, you must do it from the top-level directory of the package.
