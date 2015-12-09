@@ -1,6 +1,6 @@
 {
   "name": "semver-in-file-text-bumper",
-  "version": "5.0.4-beta.1",
+  "version": "5.0.4-beta.14",
   "description-dummy": "Utility for bumping version number (e.g., 1.2.3 to 1.3.0) in the text of all appropriate files.",
   "main": "index.js",
   "scripts": {
@@ -43,5 +43,13 @@
     "mockery": "^1.4.0",
     "sinon": "^1.17.2",
     "util": "^0.10.3"
+  },
+  "semverInFileTextBumper": {
+    "jsonFiles": [
+      {
+        "filepath": "package.json",
+        "key": "version"
+      }
+    ]
   }
 }

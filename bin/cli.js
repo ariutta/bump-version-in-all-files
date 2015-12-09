@@ -22,7 +22,7 @@ program
   });
 
 program
-  .command('bumpfiles [newVersion...]')
+  .command('bump [newVersion...]')
   .description('Bump semver version of all relevant files for this package.')
   .action(function(newVersion, options) {
     var bumpStream = semverInFileTextBumper.bump({
