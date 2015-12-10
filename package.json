@@ -50,16 +50,6 @@
         "filepath": "package.json",
         "key": "version"
       }
-    ],
-    "grepFlags": {
-      "include": [
-        "abc"
-      ],
-      "exclude": [
-        "def",
-        "ghi"
-      ],
-      "excludeDir": []
-    }
+    ]
   }
 }
