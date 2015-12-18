@@ -18,3 +18,9 @@ npm link ../semver-inc-wizard
 npm link ../rx-node-extra
 npm link ../rx-fs
 node ./bin/cli.js bump
+
+## Test
+
+```
+mocha test/specs/file-text-by-find-and-replace-semver-bumper.test.js
+```

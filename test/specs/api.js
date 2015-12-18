@@ -1,3 +1,5 @@
+// TODO this might be just a placeholder from an
+// old copy/paste.
 /**
  * Test Prompt public APIs
  */
