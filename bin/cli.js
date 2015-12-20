@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 var fs = require('fs');
-var Rx = require('rx');
-var RxNode = require('rx-node');
+var RxNode = require('rx-node-extra');
+var Rx = RxNode.Rx;
 var semverInFileTextBumper = require('../index.js');
 
 var program = require('commander');
@@ -13,6 +13,7 @@ program
   .option('-v, --version [version]',
       'See which version of bumpVersionInAllFiles you have installed [version]');
 
+/* TODO create this
 program
   .command('set [newVersion...]')
   .description('Specify and save your desired settings.')
@@ -20,6 +21,7 @@ program
     var stream = semverInFileTextBumper.set();
     var disposable = RxNode.writeToStream(stream, process.stdout, 'utf8');
   });
+//*/
 
 program
   .command('bump [newVersion...]')

@@ -23,7 +23,7 @@ var bumpOptions = {
   filepath: path.resolve(__dirname, '..', 'inputs'),
   args: {
     include: ['sample-README.md', 'sample-OTHER.md', 'sub/sample-OTHER.md'],
-    exclude: ['package.json', 'ignore.md'],
+    exclude: ['sample-package.json', 'ignore.md'],
     excludeDir: ['ignore']
   },
   bddStdinBound: bddStdin.bind(null,
@@ -91,10 +91,7 @@ describe('Public API', function() {
 
     var grepResultsClone = _.cloneDeep(grepResults);
 
-    var actualPromptSetCollection = _.pairs(_.groupBy(_.map(grepResultsClone, function(grepResult) {
-      grepResult.file = path.relative(filepath, grepResult.file);
-      return grepResult;
-    }), 'file'))
+    var actualPromptSetCollection = _.pairs(_.groupBy(grepResultsClone, 'file'))
     .map(function(pair) {
       var grepResultsByFile = pair[1];
       var iterable = createIterable(grepResultsByFile);
