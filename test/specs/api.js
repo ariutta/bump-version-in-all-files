@@ -90,7 +90,13 @@ describe('Public API', function() {
 
     var grepResultsClone = _.cloneDeep(grepResults);
 
-    var actualPromptSetCollection = _.pairs(_.groupBy(grepResultsClone, 'file'))
+    var actualPromptSetCollection = _.pairs(_.groupBy(grepResultsClone.map(function(grepResult) {
+      var parentDir = path.resolve(__dirname, '..', '..');
+      // Don't make it specific to my own system.
+      grepResult.file = grepResult.file.replace(
+          '/Users/andersriutta/Sites/semver-bumper-for-file-text', parentDir);
+      return grepResult;
+    }), 'file'))
     .map(function(pair) {
       var grepResultsByFile = pair[1];
       var iterable = createIterable(grepResultsByFile);
