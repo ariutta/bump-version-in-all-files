@@ -27,11 +27,9 @@
     "lodash": "^3.10.1",
     "pretty-error": "^1.2.0",
     "resolve-from": "^1.0.1",
-    "rx": "^4.0.6",
     "rx-fs": "https://github.com/ariutta/rx-fs.git",
-    "rx-node": "^1.0.1",
-    "rx-node-extra": "https://github.com/ariutta/rx-node-extra.git",
-    "semver-inc-wizard": "https://github.com/ariutta/semver-inc-wizard.git",
+    "rx-node-extra": "^1.0.0",
+    "semver-inc-wizard": "^1.0.0",
     "shelly": "0.0.3",
     "strip-ansi": "^3.0.0",
     "verror": "^1.6.0"
