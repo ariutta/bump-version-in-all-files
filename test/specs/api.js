@@ -27,7 +27,6 @@ var bumpOptions = {
     excludeDir: ['ignore']
   },
   bddStdinBound: bddStdin.bind(null,
-      // TODO is it correct to start with four yes's?
       '\n',
       '\n',
       '\n',
