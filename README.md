@@ -5,7 +5,6 @@ Currently, you must do it from the top-level directory of the package.
 
 ## TODO
 
-[ ] Improve cli.js based on version from wikipathways-api-client-js
 [ ] Test main.js, including bumping of JSON files. Possibly split JSON bumping out into its own file.
 [ ] Get rx-extra, rx-node-extra and semver-inc-wizard published and update version of dependency in this package.json.
 [ ] Publish to npm.
