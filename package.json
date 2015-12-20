@@ -1,5 +1,5 @@
 {
-  "name": "semver-in-file-text-bumper",
+  "name": "semver-bumper-for-file-text",
   "version": "1.0.0",
   "description": "Utility for bumping version number (e.g., 1.2.3 to 1.3.0) in the text of all appropriate files.",
   "main": "index.js",
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ariutta/semver-in-file-text-bumper.git"
+    "url": "git+https://github.com/ariutta/semver-bumper-for-file-text.git"
   },
   "keywords": [
     "bump"
@@ -16,9 +16,9 @@
   "author": "Anders Riutta",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/ariutta/semver-in-file-text-bumper/issues"
+    "url": "https://github.com/ariutta/semver-bumper-for-file-text/issues"
   },
-  "homepage": "https://github.com/ariutta/semver-in-file-text-bumper#readme",
+  "homepage": "https://github.com/ariutta/semver-bumper-for-file-text#readme",
   "dependencies": {
     "JSONStream": "^1.0.6",
     "colors": "^1.1.2",
@@ -46,7 +46,7 @@
     "sinon": "^1.17.2",
     "util": "^0.10.3"
   },
-  "semverInFileTextBumper": {
+  "semverBumper": {
     "jsonFiles": [
       {
         "filepath": "package.json",

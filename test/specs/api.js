@@ -5,7 +5,7 @@
 var _ = require('lodash');
 var bddStdin = require('bdd-stdin');
 var expect = require('chai').expect;
-var fileLineUpdater = require('../../lib/update-file-lines.js');
+var fileLineUpdater = require('../../lib/file-line-updater.js');
 var fs = require('fs');
 var grepObservable = require('../../lib/grep-observable.js');
 var expectedPromptSetCollection = require('../expected-prompt-sets-collection.json');
@@ -16,7 +16,7 @@ var Rx = RxNode.Rx;
 var rxFs = require('rx-fs');
 var sinon = require('sinon');
 
-var fileTextByFindAndReplaceSemverBumper = require('../../lib/bump-files-by-find-and-replace.js');
+var semverBumperByFindAndReplace = require('../../lib/semver-bumper-by-find-and-replace.js');
 
 var bumpOptions = {
   newVersion: '2.3.0',
@@ -86,8 +86,8 @@ describe('Public API', function() {
   var bddStdinBound = bumpOptions.bddStdinBound;
 
   it('should create list of bumpable semvers & create prompt set for each one', function() {
-    var getPromptSet = fileTextByFindAndReplaceSemverBumper._getPromptSet;
-    var createIterable = fileTextByFindAndReplaceSemverBumper._createIterable;
+    var getPromptSet = semverBumperByFindAndReplace._getPromptSet;
+    var createIterable = semverBumperByFindAndReplace._createIterable;
 
     var grepResultsClone = _.cloneDeep(grepResults);
 
@@ -103,10 +103,9 @@ describe('Public API', function() {
     expect(actualPromptSetCollection).to.deep.equal(expectedPromptSetCollection);
   });
 
-  it('should bumpFilesByFindAndReplace (no actual side-effects in the test)', function(done) {
+  it('should bump files by find & replace (no actual side-effects in the test)', function(done) {
     bddStdinBound();
-    var bumpFilesByFindAndReplace = fileTextByFindAndReplaceSemverBumper.bumpFilesByFindAndReplace;
-    bumpFilesByFindAndReplace(newVersion, filepath, args)
+    semverBumperByFindAndReplace.bump(newVersion, filepath, args)
       .subscribe(function(result) {
         expect(result.actual).to.equal(result.expected);
       }, done, done);
