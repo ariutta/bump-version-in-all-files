@@ -1,0 +1,4 @@
+{
+  "name-sample-data1": "sample-name",
+  "description-sample-data1": "Utility for bumping version number, such as 4.7.1 to 4.7.1 in the text of all appropriate files."
+}

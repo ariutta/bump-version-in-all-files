@@ -3,352 +3,116 @@
  */
 
 var _ = require('lodash');
+var bddStdin = require('bdd-stdin');
 var expect = require('chai').expect;
+var fileLineUpdater = require('../../lib/update-file-lines.js');
+var fs = require('fs');
 var grepObservable = require('../../lib/grep-observable.js');
+var expectedPromptSetCollection = require('../expected-prompt-sets-collection.json');
+var grepResults = require('../grep-results.json');
 var path = require('path');
-var Rx = require('rx');
+var RxNode = require('rx-node-extra');
+var Rx = RxNode.Rx;
+var rxFs = require('rx-fs');
 var sinon = require('sinon');
 
 var fileTextByFindAndReplaceSemverBumper = require('../../lib/bump-files-by-find-and-replace.js');
 
-var bumpOptions = [{
-  newVersion: '2.0.0-alpha.2',
-  filepath: path.resolve(__dirname, '../'),
+var bumpOptions = {
+  newVersion: '2.3.0',
+  filepath: path.resolve(__dirname, '..', 'inputs'),
   args: {
-    include: ['sample-data1.json', 'sample-data2.json'],
-    exclude: ['package.json'],
-    excludeDir: ['node_modules']
+    include: ['sample-README.md', 'sample-OTHER.md', 'sub/sample-OTHER.md'],
+    exclude: ['sample-package.json', 'ignore.md'],
+    excludeDir: ['ignore']
   },
-  expected: '2.0.0-alpha.2',
-  grepResultsByFile: [{
-    'file': path.resolve(__dirname, '../../sample-data1.json'),
-    'lineNumber': 3,
-    'line': '  \"version-sample-data1\": \"4.3.2\"',
-    'chunks': [
-      {
-        'str': '  \"version-sample-data1\": \"',
-        'matched': false
-      },
-      {
-        'str': '4.3.2',
-        'matched': true
-      },
-      {
-        'str': '\"',
-        'matched': false
-      }
-    ]
-  }],
-  expectedPrompts: [{
-    type: 'confirm',
-    name: {
-      file: path.resolve(__dirname, '../../sample-data1.json'),
-      lineIndex: 2,
-      str: '4.3.2',
-      chunkIndex: 1
-    },
-      message: 'Replace \u001b[4m4.3.2\u001b[24m with \u001b[4m2.0.0-alpha.2\u001b[24m ' +
-        '(../sample-data1.json:3)?\n\n      "version-sample-data1": ' +
-        '"\u001b[33m\u001b[1m4.3.2\u001b[22m\u001b[39m"\n\n',
-    default: true
-  }],
-  expectedStarter: {
-    'file': path.resolve(__dirname, '../../sample-data1.json'),
-    'lineDetailsMap': {
-      '2': {
-        'chunkStrings': [
-          '  \"version-sample-data1\": \"',
-          '4.3.2',
-          '\"'
-        ],
-        'updated': false
-      }
-    }
-  },
-  lineDetailsMapsByFile: {
-    'file': path.resolve(__dirname, '../../sample-data1.json'),
-    'lineDetailsMap': {
-      '2': {
-        'chunkStrings': [
-          '  \"version-sample-data1\": \"',
-          '4.3.2',
-          '\"'
-        ],
-        'updated': true
-      }
-    }
-  },
-  expectedFilteredLineMap: {
-    '2': '  \"version-sample-data1\": \"4.3.2\"'
-  }
-}, {
-  newVersion: '2.0.0-alpha.2',
-  filepath: path.resolve(__dirname, '../'),
-  args: {
-    include: ['sample-data2.json'],
-    exclude: ['package.json'],
-    excludeDir: ['node_modules']
-  },
-  expected: '2.0.0-alpha.2',
-  grepResultsByFile: [{
-      'file': '/Users/andersriutta/Sites/semver-in-file-text-bumper/test/sample-data2.json',
-      'lineNumber': 3,
-      'line': '  \"version-sample-data2\": \"4.3.2\",',
-      'chunks': [
-        {
-          'str': '  \"version-sample-data2\": \"',
-          'matched': false
-        },
-        {
-          'str': '4.3.2',
-          'matched': true
-        },
-        {
-          'str': '\",',
-          'matched': false
-        }
-      ]
-    },
-    {
-      'file': '/Users/andersriutta/Sites/semver-in-file-text-bumper/test/sample-data2.json',
-      'lineNumber': 4,
-      'line': '  \"description-sample-data2\": \"Utility for bumping version number, such as ' +
-        '4.3.2 to 4.3.2 in the text of all appropriate files.\",',
-      'chunks': [
-        {
-          'str': '  \"description-sample-data2\": \"Utility for bumping version number, such as ',
-          'matched': false
-        },
-        {
-          'str': '4.3.2',
-          'matched': true
-        },
-        {
-          'str': ' to ',
-          'matched': false
-        },
-        {
-          'str': '4.3.2',
-          'matched': true
-        },
-        {
-          'str': ' in the text of all appropriate files.\",',
-          'matched': false
-        }
-      ]
-    },
-    {
-      'file': '/Users/andersriutta/Sites/semver-in-file-text-bumper/test/sample-data2.json',
-      'lineNumber': 6,
-      'line': '    \"JSONStream-sample-data2\": \"^4.3.2\",',
-      'chunks': [
-        {
-          'str': '    \"JSONStream-sample-data2\": \"^',
-          'matched': false
-        },
-        {
-          'str': '4.3.2',
-          'matched': true
-        },
-        {
-          'str': '\",',
-          'matched': false
-        }
-      ]
-  }],
-  expectedPrompts: [{
-    'type': 'confirm',
-    'name': {
-      'file': '/Users/andersriutta/Sites/semver-in-file-text-bumper/test/sample-data2.json',
-      'lineIndex': 2,
-      'str': '4.3.2',
-      'chunkIndex': 1
-    },
-    'message': 'Replace \u001b[4m4.3.2\u001b[24m with ' +
-      '\u001b[4m2.0.0-alpha.2\u001b[24m (sample-data2.json:3)?\n\n' +
-      '      \"version-sample-data2\": \"\u001b[33m\u001b[1m4.3.2\u001b[22m\u001b[39m\",\n\n',
-    'default': true
-  },
-  {
-    'type': 'confirm',
-    'name': {
-      'file': '/Users/andersriutta/Sites/semver-in-file-text-bumper/test/sample-data2.json',
-      'lineIndex': 3,
-      'str': '4.3.2',
-      'chunkIndex': 1
-    },
-    'message': 'Replace \u001b[4m4.3.2\u001b[24m with \u001b[4m2.0.0-alpha.2\u001b[24m' +
-      ' (sample-data2.json:4)?\n\n      \"description-sample-data2\": \"Utility for bumping ' +
-      'version number, such as \u001b[33m\u001b[1m4.3.2\u001b[22m\u001b[39m to 4.3.2 in the ' +
-        'text of all appropriate files.\",\n\n',
-    'default': true
-  },
-  {
-    'type': 'confirm',
-    'name': {
-      'file': '/Users/andersriutta/Sites/semver-in-file-text-bumper/test/sample-data2.json',
-      'lineIndex': 3,
-      'str': '4.3.2',
-      'chunkIndex': 3
-    },
-    'message': 'Replace \u001b[4m4.3.2\u001b[24m with \u001b[4m2.0.0-alpha.2\u001b[24m ' +
-      '(sample-data2.json:4)?\n\n      \"description-sample-data2\": \"Utility for bumping ' +
-      'version number, such as 4.3.2 to \u001b[33m\u001b[1m4.3.2\u001b[22m\u001b[39m in ' +
-        'the text of all appropriate files.\",\n\n',
-    'default': true
-  },
-  {
-    'type': 'confirm',
-    'name': {
-      'file': '/Users/andersriutta/Sites/semver-in-file-text-bumper/test/sample-data2.json',
-      'lineIndex': 5,
-      'str': '4.3.2',
-      'chunkIndex': 1
-    },
-    'message': 'Replace \u001b[4m4.3.2\u001b[24m with \u001b[4m2.0.0-alpha.2\u001b[24m ' +
-      '(sample-data2.json:6)?\n\n        \"JSONStream-sample-data2\": ' +
-      '\"^\u001b[33m\u001b[1m4.3.2\u001b[22m\u001b[39m\",\n\n',
-    'default': true
-  }],
-  expectedStarter: {
-    'file': '/Users/andersriutta/Sites/semver-in-file-text-bumper/test/sample-data2.json',
-    'lineDetailsMap': {
-      '2': {
-        'chunkStrings': [
-          '  \"version-sample-data2\": \"',
-          '4.3.2',
-          '\",'
-        ],
-        'updated': false
-      },
-      '3': {
-        'chunkStrings': [
-          '  \"description-sample-data2\": \"Utility for bumping version number, such as ',
-          '4.3.2',
-          ' to ',
-          '4.3.2',
-          ' in the text of all appropriate files.\",'
-        ],
-        'updated': false
-      },
-      '5': {
-        'chunkStrings': [
-          '    \"JSONStream-sample-data2\": \"^',
-          '4.3.2',
-          '\",'
-        ],
-        'updated': false
-      }
-    }
-  },
-  lineDetailsMapsByFile: {
-    'file': '/Users/andersriutta/Sites/semver-in-file-text-bumper/test/sample-data2.json',
-    'lineDetailsMap': {
-      '2': {
-        'chunkStrings': [
-          '  \"version-sample-data2\": \"',
-          '4.3.2',
-          '\",'
-        ],
-        'updated': true
-      },
-      '3': {
-        'chunkStrings': [
-          '  \"description-sample-data2\": \"Utility for bumping version number, such as ',
-          '4.3.2',
-          ' to ',
-          '4.3.2',
-          ' in the text of all appropriate files.\",'
-        ],
-        'updated': true
-      },
-      '5': {
-        'chunkStrings': [
-          '    \"JSONStream-sample-data2\": \"^',
-          '4.3.2',
-          '\",'
-        ],
-        'updated': true
-      }
-    }
-  },
-  expectedFilteredLineMap: {
-    '2': '  \"version-sample-data2\": \"4.3.2\",',
-    '3': '  \"description-sample-data2\": \"Utility for bumping version number, such as ' +
-      '4.3.2 to 4.3.2 in the text of all appropriate files.\",',
-    '5': '    \"JSONStream-sample-data2\": \"^4.3.2\",'
-  }
-}];
-
-function run(bumpOption) {
-  var newVersion = bumpOption.newVersion;
-  var filepath = bumpOption.filepath;
-  var args = bumpOption.args;
-  var grepResultsByFile = bumpOption.grepResultsByFile;
-  var expectedPrompts = bumpOption.expectedPrompts;
-  var expectedStarter = bumpOption.expectedStarter;
-  var lineDetailsMapsByFile = bumpOption.lineDetailsMapsByFile;
-  var expectedFilteredLineMap = bumpOption.expectedFilteredLineMap;
-
-  var dataFilepath = bumpOption.grepResultsByFile[0].file;
-
-  /*
-  it('should verify _getPromptSource returns the correct Observable', function(done) {
-    fileTextByFindAndReplaceSemverBumper._getPromptSource(newVersion, filepath, grepResultsByFile)
-      .toArray()
-      .subscribe(function(result) {
-        expect(result).to.deep.equal(expectedPrompts);
-        done();
-      }, done);
-  });
-
-  it('should verify _getStarter returns the correct data to init the reducer', function() {
-    var starter = fileTextByFindAndReplaceSemverBumper._getStarter(grepResultsByFile);
-    expect(starter).to.deep.equal(expectedStarter);
-  });
-  //*/
-
-  it('should verify _getFilteredLineMap returns the correct result', function() {
-    var _getFilteredLineMap = fileTextByFindAndReplaceSemverBumper._getFilteredLineMap;
-    var filteredLineMap = _getFilteredLineMap(lineDetailsMapsByFile.lineDetailsMap);
-    expect(filteredLineMap).to.deep.equal(expectedFilteredLineMap);
-
-    console.log('grepObservable.grep');
-    console.log(grepObservable.grep);
-  });
-}
+  bddStdinBound: bddStdin.bind(null,
+      // TODO is it correct to start with four yes's?
+      '\n',
+      '\n',
+      '\n',
+      '\n',
+      'n', '\n',
+      'n', '\n',
+      '\n',
+      '\n')
+};
 
 // Run tests
 describe('Public API', function() {
-
   before(function(done) {
-    // TODO finish stubbing this out such that it will
-    // return the appropriate data based on the
-    // iteration.
-    //
-    // Also, should it use yield?
     sinon
-      .stub(grepObservable, 'grep')
-      .yields(null, null, bumpOptions[0].grepResultsByFile);
+      .stub(grepObservable, 'grep', function() {
+        return Rx.Observable.from(grepResults);
+      });
+
+    sinon
+      .stub(fileLineUpdater, 'update', function(file, updater) {
+        var dataSource = rxFs.createReadObservable(file, {
+            flags: 'r'
+          })
+          .flatMap(function(data) {
+            var lines = data.toString().split('\n');
+            // NOTE On at least OS/X, the last line will be empty, but we
+            // still want to keep it.
+            // TODO check whether this is cross-platform compatible.
+            return Rx.Observable.from(lines);
+          });
+
+        return dataSource
+          .let(updater)
+          .map(function(fileString) {
+            return {
+              actual: fileString,
+              expected: fs.readFileSync(file.replace('inputs', 'expected'), {
+                encoding: 'utf8'
+              })
+            };
+          });
+      });
+
     done();
   });
 
   after(function(done) {
     grepObservable.grep.restore();
+    fileLineUpdater.update.restore();
     done();
   });
 
-  _.each(bumpOptions, function(bumpOption) {
-    run(bumpOption);
-  }, this);
+  var newVersion = bumpOptions.newVersion;
+  var filepath = bumpOptions.filepath;
+  var args = bumpOptions.args;
+  var bddStdinBound = bumpOptions.bddStdinBound;
 
-  it('should stub grepObservable', function() {
-    // TODO once grepObservable.grep is stubbed,
-    // stub the writeFileLines method as well,
-    // and then call the entire bump-by-find-and-replace.
-    console.log('grepObservable.grep');
-    console.log(grepObservable.grep);
-    expect(grepObservable.grep.called).to.be.false;
+  it('should create list of bumpable semvers & create prompt set for each one', function() {
+    var getPromptSet = fileTextByFindAndReplaceSemverBumper._getPromptSet;
+    var createIterable = fileTextByFindAndReplaceSemverBumper._createIterable;
+
+    var grepResultsClone = _.cloneDeep(grepResults);
+
+    var actualPromptSetCollection = _.pairs(_.groupBy(_.map(grepResultsClone, function(grepResult) {
+      grepResult.file = path.relative(filepath, grepResult.file);
+      return grepResult;
+    }), 'file'))
+    .map(function(pair) {
+      var grepResultsByFile = pair[1];
+      var iterable = createIterable(grepResultsByFile);
+      return iterable.map(function(item) {
+        return getPromptSet(newVersion, filepath, item);
+      });
+    });
+
+    expect(actualPromptSetCollection).to.deep.equal(expectedPromptSetCollection);
+  });
+
+  it('should bumpFilesByFindAndReplace (no actual side-effects in the test)', function(done) {
+    bddStdinBound();
+    var bumpFilesByFindAndReplace = fileTextByFindAndReplaceSemverBumper.bumpFilesByFindAndReplace;
+    bumpFilesByFindAndReplace(newVersion, filepath, args)
+      .subscribe(function(result) {
+        expect(result.actual).to.equal(result.expected);
+      }, done, done);
   });
 
 });

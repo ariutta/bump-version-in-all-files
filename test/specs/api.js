@@ -1,357 +1,118 @@
-// TODO this might be just a placeholder from an
-// old copy/paste.
 /**
  * Test Prompt public APIs
  */
 
 var _ = require('lodash');
 var bddStdin = require('bdd-stdin');
-var bumpFilesByFindAndReplace = require('../../lib/bump-files-by-find-and-replace.js');
 var expect = require('chai').expect;
-var Rx = require('rx');
+var fileLineUpdater = require('../../lib/update-file-lines.js');
+var fs = require('fs');
+var grepObservable = require('../../lib/grep-observable.js');
+var expectedPromptSetCollection = require('../expected-prompt-sets-collection.json');
+var grepResults = require('../grep-results.json');
+var path = require('path');
+var RxNode = require('rx-node-extra');
+var Rx = RxNode.Rx;
+var rxFs = require('rx-fs');
 var sinon = require('sinon');
 
-/*
-var bumpOptions = [{
-  oldVersion: '2.0.0-alpha.2',
-  revisionType: 'build',
-  bddStdinBound: bddStdin.bind(null, '\n'),
-  expectedNewVersion: '2.0.0-alpha.2'
-}, {
-  oldVersion: '2.0.0-alpha.2',
-  revisionType: 'alpha',
-  bddStdinBound: bddStdin.bind(null, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.0-alpha.3'
-}, {
-  oldVersion: '2.0.0-alpha.2',
-  revisionType: 'beta',
-  bddStdinBound: bddStdin.bind(null, bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.0-beta.0'
-}, {
-  oldVersion: '2.0.0-alpha.2',
-  revisionType: 'rc',
-  bddStdinBound: bddStdin.bind(null,
-                               bddStdin.keys.down, bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.0-rc.0'
-}, {
-  oldVersion: '2.0.0-alpha.2',
-  revisionType: 'production',
-  bddStdinBound: bddStdin.bind(null,
-      bddStdin.keys.down, bddStdin.keys.down, bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.0'
-}, {
-  oldVersion: '2.0.0-beta.0',
-  revisionType: 'build',
-  bddStdinBound: bddStdin.bind(null, '\n'),
-  expectedNewVersion: '2.0.0-beta.0'
-}, {
-  oldVersion: '2.0.0-beta.0',
-  revisionType: 'beta',
-  bddStdinBound: bddStdin.bind(null, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.0-beta.1'
-}, {
-  oldVersion: '2.0.0-beta.0',
-  revisionType: 'rc',
-  bddStdinBound: bddStdin.bind(null, bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.0-rc.0'
-}, {
-  oldVersion: '2.0.0-beta.0',
-  revisionType: 'production',
-  bddStdinBound: bddStdin.bind(null,
-      bddStdin.keys.down, bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.0'
-}, {
-  oldVersion: '2.0.0-rc.1',
-  revisionType: 'build',
-  bddStdinBound: bddStdin.bind(null, '\n'),
-  expectedNewVersion: '2.0.0-rc.1'
-}, {
-  oldVersion: '2.0.0-rc.1',
-  revisionType: 'rc',
-  bddStdinBound: bddStdin.bind(null, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.0-rc.2'
-}, {
-  oldVersion: '2.0.0-rc.1',
-  revisionType: 'production',
-  bddStdinBound: bddStdin.bind(null,
-      bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.0'
-}, {
-  oldVersion: '2.0.0',
-  revisionType: 'build/production',
-  bddStdinBound: bddStdin.bind(null,
-                               '\n',
-                               '\n'),
-  expectedNewVersion: '2.0.0'
-}, {
-  oldVersion: '2.0.0',
-  revisionType: 'alpha',
-  bddStdinBound: bddStdin.bind(null,
-                               bddStdin.keys.down, '\n',
-                               bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.1-alpha.0'
-}, {
-  oldVersion: '2.0.0',
-  revisionType: 'beta',
-  bddStdinBound: bddStdin.bind(null,
-                               bddStdin.keys.down, '\n',
-                               bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.1-beta.0'
-}, {
-  oldVersion: '2.0.0',
-  revisionType: 'rc',
-  bddStdinBound: bddStdin.bind(null,
-                               bddStdin.keys.down, '\n',
-                               bddStdin.keys.down, bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.1-rc.0'
-}, {
-  oldVersion: '2.0.0',
-  revisionType: 'patch/production',
-  bddStdinBound: bddStdin.bind(null,
-                               bddStdin.keys.down, '\n',
-                               '\n'),
-  expectedNewVersion: '2.0.1'
-}, {
-  oldVersion: '2.0.0',
-  revisionType: 'minor/production',
-  bddStdinBound: bddStdin.bind(null,
-                               bddStdin.keys.down, bddStdin.keys.down, '\n',
-                               '\n'),
-  expectedNewVersion: '2.1.0'
-}, {
-  oldVersion: '2.0.0',
-  revisionType: 'major/production',
-  bddStdinBound: bddStdin.bind(null,
-                               bddStdin.keys.down, bddStdin.keys.down, bddStdin.keys.down, '\n',
-                               '\n'),
-  expectedNewVersion: '3.0.0'
-}, {
-  oldVersion: '2.0.10-alpha.0',
-  revisionType: 'build',
-  bddStdinBound: bddStdin.bind(null, '\n'),
-  expectedNewVersion: '2.0.10-alpha.0'
-}, {
-  oldVersion: '2.0.10-alpha.0',
-  revisionType: 'alpha',
-  bddStdinBound: bddStdin.bind(null, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.10-alpha.1'
-}, {
-  oldVersion: '2.0.10-alpha.0',
-  revisionType: 'beta',
-  bddStdinBound: bddStdin.bind(null, bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.10-beta.0'
-}, {
-  oldVersion: '2.0.10-alpha.0',
-  revisionType: 'rc',
-  bddStdinBound: bddStdin.bind(null,
-                               bddStdin.keys.down, bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.10-rc.0'
-}, {
-  oldVersion: '2.0.10-alpha.0',
-  revisionType: 'production',
-  bddStdinBound: bddStdin.bind(null,
-      bddStdin.keys.down, bddStdin.keys.down, bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.10'
-}, {
-  oldVersion: '2.0.10-beta.21',
-  revisionType: 'build',
-  bddStdinBound: bddStdin.bind(null, '\n'),
-  expectedNewVersion: '2.0.10-beta.21'
-}, {
-  oldVersion: '2.0.10-beta.21',
-  revisionType: 'beta',
-  bddStdinBound: bddStdin.bind(null, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.10-beta.22'
-}, {
-  oldVersion: '2.0.10-beta.21',
-  revisionType: 'rc',
-  bddStdinBound: bddStdin.bind(null, bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.10-rc.0'
-}, {
-  oldVersion: '2.0.10-beta.21',
-  revisionType: 'production',
-  bddStdinBound: bddStdin.bind(null,
-      bddStdin.keys.down, bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.10'
-}, {
-  oldVersion: '2.0.10-rc.0',
-  revisionType: 'build',
-  bddStdinBound: bddStdin.bind(null, '\n'),
-  expectedNewVersion: '2.0.10-rc.0'
-}, {
-  oldVersion: '2.0.10-rc.0',
-  revisionType: 'rc',
-  bddStdinBound: bddStdin.bind(null, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.10-rc.1'
-}, {
-  oldVersion: '2.0.10-rc.0',
-  revisionType: 'production',
-  bddStdinBound: bddStdin.bind(null,
-      bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.0.10'
-}, {
-  oldVersion: '2.0.10',
-  revisionType: 'patch/production',
-  bddStdinBound: bddStdin.bind(null,
-                               bddStdin.keys.down, '\n',
-                               '\n'),
-  expectedNewVersion: '2.0.11'
-}, {
-  oldVersion: '2.0.10',
-  revisionType: 'minor/production',
-  bddStdinBound: bddStdin.bind(null,
-                               bddStdin.keys.down, bddStdin.keys.down, '\n',
-                               '\n'),
-  expectedNewVersion: '2.1.0'
-}, {
-  oldVersion: '2.0.10',
-  revisionType: 'major/production',
-  bddStdinBound: bddStdin.bind(null,
-                               bddStdin.keys.down, bddStdin.keys.down, bddStdin.keys.down, '\n',
-                               '\n'),
-  expectedNewVersion: '3.0.0'
-}, {
-  oldVersion: '2.1.0-alpha.0',
-  revisionType: 'build',
-  bddStdinBound: bddStdin.bind(null, '\n'),
-  expectedNewVersion: '2.1.0-alpha.0'
-}, {
-  oldVersion: '2.1.0-alpha.0',
-  revisionType: 'alpha',
-  bddStdinBound: bddStdin.bind(null, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.1.0-alpha.1'
-}, {
-  oldVersion: '2.1.0-alpha.0',
-  revisionType: 'beta',
-  bddStdinBound: bddStdin.bind(null, bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.1.0-beta.0'
-}, {
-  oldVersion: '2.1.0-alpha.0',
-  revisionType: 'rc',
-  bddStdinBound: bddStdin.bind(null,
-                               bddStdin.keys.down, bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.1.0-rc.0'
-}, {
-  oldVersion: '2.1.0-alpha.0',
-  revisionType: 'production',
-  bddStdinBound: bddStdin.bind(null,
-      bddStdin.keys.down, bddStdin.keys.down, bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.1.0'
-}, {
-  oldVersion: '2.1.0-beta.0',
-  revisionType: 'build',
-  bddStdinBound: bddStdin.bind(null, '\n'),
-  expectedNewVersion: '2.1.0-beta.0'
-}, {
-  oldVersion: '2.1.0-beta.0',
-  revisionType: 'beta',
-  bddStdinBound: bddStdin.bind(null, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.1.0-beta.1'
-}, {
-  oldVersion: '2.1.0-beta.0',
-  revisionType: 'rc',
-  bddStdinBound: bddStdin.bind(null, bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.1.0-rc.0'
-}, {
-  oldVersion: '2.1.0-beta.0',
-  revisionType: 'production',
-  bddStdinBound: bddStdin.bind(null,
-      bddStdin.keys.down, bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.1.0'
-}, {
-  oldVersion: '2.1.0-rc.0',
-  revisionType: 'build',
-  bddStdinBound: bddStdin.bind(null, '\n'),
-  expectedNewVersion: '2.1.0-rc.0'
-}, {
-  oldVersion: '2.1.0-rc.10',
-  revisionType: 'rc',
-  bddStdinBound: bddStdin.bind(null, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.1.0-rc.11'
-}, {
-  oldVersion: '2.1.0-rc.10',
-  revisionType: 'production',
-  bddStdinBound: bddStdin.bind(null,
-      bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.1.0'
-}, {
-  oldVersion: '2.1.0',
-  revisionType: 'alpha',
-  bddStdinBound: bddStdin.bind(null,
-                               bddStdin.keys.down, '\n',
-                               bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.1.1-alpha.0'
-}, {
-  oldVersion: '2.1.0',
-  revisionType: 'beta',
-  bddStdinBound: bddStdin.bind(null,
-                               bddStdin.keys.down, '\n',
-                               bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.1.1-beta.0'
-}, {
-  oldVersion: '2.1.0',
-  revisionType: 'rc',
-  bddStdinBound: bddStdin.bind(null,
-                               bddStdin.keys.down, '\n',
-                               bddStdin.keys.down, bddStdin.keys.down, bddStdin.keys.down, '\n'),
-  expectedNewVersion: '2.1.1-rc.0'
-}, {
-  oldVersion: '2.1.0',
-  revisionType: 'patch/production',
-  bddStdinBound: bddStdin.bind(null,
-                               bddStdin.keys.down, '\n',
-                               '\n'),
-  expectedNewVersion: '2.1.1'
-}, {
-  oldVersion: '2.1.0',
-  revisionType: 'minor/production',
-  bddStdinBound: bddStdin.bind(null,
-                               bddStdin.keys.down, bddStdin.keys.down, '\n',
-                               '\n'),
-  expectedNewVersion: '2.2.0'
-}, {
-  oldVersion: '2.1.0',
-  revisionType: 'major/production',
-  bddStdinBound: bddStdin.bind(null,
-                               bddStdin.keys.down, bddStdin.keys.down, bddStdin.keys.down, '\n',
-                               '\n'),
-  expectedNewVersion: '3.0.0'
-}];
-//*/
+var fileTextByFindAndReplaceSemverBumper = require('../../lib/bump-files-by-find-and-replace.js');
 
-function run(bumpOption) {
-  var newVersion = '4.3.2';
-  var filepath = process.cwd();
-  var args = {
-    include: ['dummy.json', 'testfile.json'],
-    exclude: ['package.json'],
-    excludeDir: ['node_modules']
-  };
-  bumpFilesByFindAndReplace(newVersion, filepath, args)
-    .subscribe(function(result) {
-      console.log('run-inc: subscribe');
-    }, function(err) {
-      throw err;
-    }, function() {
-    });
-
-  var oldVersion = bumpOption.oldVersion;
-  var revisionType = bumpOption.revisionType;
-  var expectedNewVersion = bumpOption.expectedNewVersion;
-  it('should bump ' + oldVersion + ' to ' + expectedNewVersion + ' for ' + revisionType, function(done) {
-    bumpOption.bddStdinBound();
-    getNewVersion(oldVersion)
-      .first()
-      .subscribe(function(result) {
-        expect(result).to.equal(bumpOption.expectedNewVersion);
-        done();
-      }, done);
-  });
-}
+var bumpOptions = {
+  newVersion: '2.3.0',
+  filepath: path.resolve(__dirname, '..', 'inputs'),
+  args: {
+    include: ['sample-README.md', 'sample-OTHER.md', 'sub/sample-OTHER.md'],
+    exclude: ['package.json', 'ignore.md'],
+    excludeDir: ['ignore']
+  },
+  bddStdinBound: bddStdin.bind(null,
+      // TODO is it correct to start with four yes's?
+      '\n',
+      '\n',
+      '\n',
+      '\n',
+      'n', '\n',
+      'n', '\n',
+      '\n',
+      '\n')
+};
 
 // Run tests
 describe('Public API', function() {
-  _.each(bumpOptions, function(bumpOption) {
-    run(bumpOption);
-  }, this);
+  before(function(done) {
+    sinon
+      .stub(grepObservable, 'grep', function() {
+        return Rx.Observable.from(grepResults);
+      });
+
+    sinon
+      .stub(fileLineUpdater, 'update', function(file, updater) {
+        var dataSource = rxFs.createReadObservable(file, {
+            flags: 'r'
+          })
+          .flatMap(function(data) {
+            var lines = data.toString().split('\n');
+            // NOTE On at least OS/X, the last line will be empty, but we
+            // still want to keep it.
+            // TODO check whether this is cross-platform compatible.
+            return Rx.Observable.from(lines);
+          });
+
+        return dataSource
+          .let(updater)
+          .map(function(fileString) {
+            return {
+              actual: fileString,
+              expected: fs.readFileSync(file.replace('inputs', 'expected'), {
+                encoding: 'utf8'
+              })
+            };
+          });
+      });
+
+    done();
+  });
+
+  after(function(done) {
+    grepObservable.grep.restore();
+    fileLineUpdater.update.restore();
+    done();
+  });
+
+  var newVersion = bumpOptions.newVersion;
+  var filepath = bumpOptions.filepath;
+  var args = bumpOptions.args;
+  var bddStdinBound = bumpOptions.bddStdinBound;
+
+  it('should create list of bumpable semvers & create prompt set for each one', function() {
+    var getPromptSet = fileTextByFindAndReplaceSemverBumper._getPromptSet;
+    var createIterable = fileTextByFindAndReplaceSemverBumper._createIterable;
+
+    var grepResultsClone = _.cloneDeep(grepResults);
+
+    var actualPromptSetCollection = _.pairs(_.groupBy(_.map(grepResultsClone, function(grepResult) {
+      grepResult.file = path.relative(filepath, grepResult.file);
+      return grepResult;
+    }), 'file'))
+    .map(function(pair) {
+      var grepResultsByFile = pair[1];
+      var iterable = createIterable(grepResultsByFile);
+      return iterable.map(function(item) {
+        return getPromptSet(newVersion, filepath, item);
+      });
+    });
+
+    expect(actualPromptSetCollection).to.deep.equal(expectedPromptSetCollection);
+  });
+
+  it('should bumpFilesByFindAndReplace (no actual side-effects in the test)', function(done) {
+    bddStdinBound();
+    var bumpFilesByFindAndReplace = fileTextByFindAndReplaceSemverBumper.bumpFilesByFindAndReplace;
+    bumpFilesByFindAndReplace(newVersion, filepath, args)
+      .subscribe(function(result) {
+        expect(result.actual).to.equal(result.expected);
+      }, done, done);
+  });
+
 });
