@@ -1,27 +1,39 @@
 # semver-bumper-for-file-text
-Bump the version number in the text of all appropriate files in the package.
+Bump the version number in the text of all appropriate files in a package.
 
 ## Install
+
+Locally for just a specific package:
 
 ```
 npm install --save-dev semver-bumper-for-file-text
 ```
 
+and/or globally:
+
+```
+npm install -g semver-bumper-for-file-text
+```
+
 ## How To Use
 
-CLI (currently you must do it from the top-level directory of the package):
+### CLI (currently you must do it from the top-level directory of the package)
 
-```
-semver-bumper-for-file-text bump
-```
-
-or
+If you installed globally:
 
 ```
 semver-bumper-for-file-text --help
+semver-bumper-for-file-text bump
 ```
 
-Code:
+If you only installed locally:
+
+```
+./node_modules/semver-bumper-for-file-text/bin/cli.js --help
+./node_modules/semver-bumper-for-file-text/bin/cli.js bump
+```
+
+### In Code:
 
 ```js
 var semverBumperForFileText = require('semver-bumper-for-file-text');
