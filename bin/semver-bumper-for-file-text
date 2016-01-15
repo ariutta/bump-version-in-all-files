@@ -24,10 +24,10 @@ program
   .command('bump [newVersion]')
   .description('Bump semver version of all relevant files for this package.')
   .action(function(newVersion, options) {
-    var bumpStream = semverBumperForFileText.bump({
+    var source = semverBumperForFileText.bump({
       newVersion: newVersion
     });
-    var disposable = RxNode.writeToStream(bumpStream, process.stdout, 'utf8');
+    RxNode.writeToStream(source, process.stdout, 'utf8');
   })
   .on('--help', function() {
     console.log('  Examples:');

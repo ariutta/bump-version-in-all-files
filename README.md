@@ -37,14 +37,7 @@ If you only installed locally:
 
 ```js
 var semverBumperForFileText = require('semver-bumper-for-file-text');
-semverBumperForFileText.bump()
-  .subscribe(function(result) {
-    // do something on result
-  }, function(err) {
-    throw err;
-  }, function() {
-    // do something on complete
-  });
+semverBumperForFileText.bump().subscribe();
 ```
 
 ## TODO
