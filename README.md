@@ -29,8 +29,8 @@ semver-bumper-for-file-text bump
 If you only installed locally:
 
 ```
-./node_modules/semver-bumper-for-file-text/bin/cli.js --help
-./node_modules/semver-bumper-for-file-text/bin/cli.js bump
+./node_modules/semver-bumper-for-file-text/bin/semver-bumper-for-file-text --help
+./node_modules/semver-bumper-for-file-text/bin/semver-bumper-for-file-text bump
 ```
 
 ### In Code:
