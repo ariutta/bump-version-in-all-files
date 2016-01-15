@@ -13,7 +13,7 @@ var grepResults = require('../grep-results.json');
 var path = require('path');
 var RxNode = require('rx-node-extra');
 var Rx = RxNode.Rx;
-var rxFs = require('rx-fs');
+var RxFs = require('rx-fs');
 var sinon = require('sinon');
 
 var semverBumperByFindAndReplace = require('../../lib/semver-bumper-by-find-and-replace.js');
@@ -39,7 +39,7 @@ var bumpOptions = {
 
 // Run tests
 describe('Public API', function() {
-  before(function(done) {
+  before(function() {
     sinon
       .stub(grepObservable, 'grep', function() {
         return Rx.Observable.from(grepResults);
@@ -47,7 +47,7 @@ describe('Public API', function() {
 
     sinon
       .stub(fileLineUpdater, 'update', function(file, updater) {
-        var dataSource = rxFs.createReadObservable(file, {
+        var dataSource = RxFs.createReadObservable(file, {
             flags: 'r'
           })
           .flatMap(function(data) {
@@ -69,14 +69,11 @@ describe('Public API', function() {
             };
           });
       });
-
-    done();
   });
 
-  after(function(done) {
+  after(function() {
     grepObservable.grep.restore();
     fileLineUpdater.update.restore();
-    done();
   });
 
   var newVersion = bumpOptions.newVersion;
@@ -92,7 +89,8 @@ describe('Public API', function() {
 
     var actualPromptSetCollection = _.pairs(_.groupBy(grepResultsClone.map(function(grepResult) {
       var parentDir = path.resolve(__dirname, '..', '..');
-      // Don't make it specific to my own system.
+      // The input is specific to my file system. This step corrects that to
+      // not make it specific to my system.
       grepResult.file = grepResult.file.replace(
           '/Users/andersriutta/Sites/semver-bumper-for-file-text', parentDir);
       return grepResult;
