@@ -32,8 +32,8 @@ program
   .on('--help', function() {
     console.log('  Examples:');
     console.log();
-    console.log('    $ ./bin/cli.js bump');
-    console.log('    $ ./bin/cli.js bump 1.2.3');
+    console.log('    $ ./bin/semver-bumper-for-file-text bump');
+    console.log('    $ ./bin/semver-bumper-for-file-text bump 1.2.3');
     console.log();
   });
 

@@ -1,4 +1,3 @@
-
 # sample-package-2.3.0
 Sample description goes here. The production latest release is v2.3.0. (Oops, did you notice that? It looks as if someone forget to update a version number there, because it should be v2.3.0. The test should still find it.)
 
