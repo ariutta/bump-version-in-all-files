@@ -4,7 +4,7 @@
       {
         "type": "confirm",
         "name": "bump",
-        "message": "Replace \u001b[4m2.2.3\u001b[24m with \u001b[4m2.3.0\u001b[24m (sample-OTHER.md:1)?\n\n    # Other README for sample-package-\u001b[33m\u001b[1m2.2.3\u001b[22m\u001b[39m\n\n",
+        "message": "Replace \u001b[4m2.2.3\u001b[24m with \u001b[4m2.3.0\u001b[24m (sample-data/sample-OTHER.md:1)?\n\n    # Other README for sample-package-\u001b[33m\u001b[1m2.2.3\u001b[22m\u001b[39m\n\n",
         "default": true
       }
     ]
@@ -14,7 +14,7 @@
       {
         "type": "confirm",
         "name": "bump",
-        "message": "Replace \u001b[4m2.2.3\u001b[24m with \u001b[4m2.3.0\u001b[24m (sample-README.md:1)?\n\n    # sample-package-\u001b[33m\u001b[1m2.2.3\u001b[22m\u001b[39m\n\n",
+        "message": "Replace \u001b[4m2.2.3\u001b[24m with \u001b[4m2.3.0\u001b[24m (sample-data/sample-README.md:1)?\n\n    # sample-package-\u001b[33m\u001b[1m2.2.3\u001b[22m\u001b[39m\n\n",
         "default": true
       }
     ],
@@ -22,7 +22,7 @@
       {
         "type": "confirm",
         "name": "bump",
-        "message": "Replace \u001b[4m2.2.2\u001b[24m with \u001b[4m2.3.0\u001b[24m (sample-README.md:2)?\n\n    Sample description goes here. The production latest release is v\u001b[33m\u001b[1m2.2.2\u001b[22m\u001b[39m. (Oops, did you notice that? It looks as if someone forget to update a version number there, because it should be v2.2.3. The test should still find it.)\n\n",
+        "message": "Replace \u001b[4m2.2.2\u001b[24m with \u001b[4m2.3.0\u001b[24m (sample-data/sample-README.md:2)?\n\n    Sample description goes here. The production latest release is v\u001b[33m\u001b[1m2.2.2\u001b[22m\u001b[39m. (Oops, did you notice that? It looks as if someone forget to update a version number there, because it should be v2.2.3. The test should still find it.)\n\n",
         "default": true
       }
     ],
@@ -30,7 +30,7 @@
       {
         "type": "confirm",
         "name": "bump",
-        "message": "Replace \u001b[4m2.2.3\u001b[24m with \u001b[4m2.3.0\u001b[24m (sample-README.md:2)?\n\n    Sample description goes here. The production latest release is v2.2.2. (Oops, did you notice that? It looks as if someone forget to update a version number there, because it should be v\u001b[33m\u001b[1m2.2.3\u001b[22m\u001b[39m. The test should still find it.)\n\n",
+        "message": "Replace \u001b[4m2.2.3\u001b[24m with \u001b[4m2.3.0\u001b[24m (sample-data/sample-README.md:2)?\n\n    Sample description goes here. The production latest release is v2.2.2. (Oops, did you notice that? It looks as if someone forget to update a version number there, because it should be v\u001b[33m\u001b[1m2.2.3\u001b[22m\u001b[39m. The test should still find it.)\n\n",
         "default": true
       }
     ],
@@ -38,7 +38,7 @@
       {
         "type": "confirm",
         "name": "bump",
-        "message": "Replace \u001b[4m3.0.0-rc.3\u001b[24m with \u001b[4m2.3.0\u001b[24m (sample-README.md:4)?\n\n    We are working on the next major version in v\u001b[33m\u001b[1m3.0.0-rc.3\u001b[22m\u001b[39m, and the previous major version is available as 1.5.7.\n\n",
+        "message": "Replace \u001b[4m3.0.0-rc.3\u001b[24m with \u001b[4m2.3.0\u001b[24m (sample-data/sample-README.md:4)?\n\n    We are working on the next major version in v\u001b[33m\u001b[1m3.0.0-rc.3\u001b[22m\u001b[39m, and the previous major version is available as 1.5.7.\n\n",
         "default": true
       }
     ],
@@ -46,7 +46,7 @@
       {
         "type": "confirm",
         "name": "bump",
-        "message": "Replace \u001b[4m1.5.7\u001b[24m with \u001b[4m2.3.0\u001b[24m (sample-README.md:4)?\n\n    We are working on the next major version in v3.0.0-rc.3, and the previous major version is available as \u001b[33m\u001b[1m1.5.7\u001b[22m\u001b[39m.\n\n",
+        "message": "Replace \u001b[4m1.5.7\u001b[24m with \u001b[4m2.3.0\u001b[24m (sample-data/sample-README.md:4)?\n\n    We are working on the next major version in v3.0.0-rc.3, and the previous major version is available as \u001b[33m\u001b[1m1.5.7\u001b[22m\u001b[39m.\n\n",
         "default": true
       }
     ],
@@ -54,7 +54,7 @@
       {
         "type": "confirm",
         "name": "bump",
-        "message": "Replace \u001b[4m2.2.3\u001b[24m with \u001b[4m2.3.0\u001b[24m (sample-README.md:9)?\n\n    <script src=\"//example.com/lib/sample/sample-\u001b[33m\u001b[1m2.2.3\u001b[22m\u001b[39m.bundle.min.js\"></script>\n\n",
+        "message": "Replace \u001b[4m2.2.3\u001b[24m with \u001b[4m2.3.0\u001b[24m (sample-data/sample-README.md:9)?\n\n    <script src=\"//example.com/lib/sample/sample-\u001b[33m\u001b[1m2.2.3\u001b[22m\u001b[39m.bundle.min.js\"></script>\n\n",
         "default": true
       }
     ]
@@ -64,7 +64,7 @@
       {
         "type": "confirm",
         "name": "bump",
-        "message": "Replace \u001b[4m2.2.3\u001b[24m with \u001b[4m2.3.0\u001b[24m (sub/sample-OTHER.md:1)?\n\n    # Other README for sample-package-\u001b[33m\u001b[1m2.2.3\u001b[22m\u001b[39m\n\n",
+        "message": "Replace \u001b[4m2.2.3\u001b[24m with \u001b[4m2.3.0\u001b[24m (sample-data/sub/sample-OTHER.md:1)?\n\n    # Other README for sample-package-\u001b[33m\u001b[1m2.2.3\u001b[22m\u001b[39m\n\n",
         "default": true
       }
     ]

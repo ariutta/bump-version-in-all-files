@@ -57,11 +57,12 @@ describe('Public API', function() {
       var grepResults = _.cloneDeep(allGrepResults);
 
       var actualPromptSetCollection = _.pairs(_.groupBy(grepResults.map(function(grepResult) {
-        var parentDir = path.resolve(__dirname, '..', '..');
-        // The input is specific to my file system. This step corrects that to
-        // not make it specific to my system.
-        grepResult.file = grepResult.file.replace(
-            '/Users/andersriutta/Sites/semver-bumper-for-file-text', parentDir);
+        var arAbsolutePackageDir = '/Users/andersriutta/Sites/semver-bumper-for-file-text';
+        var currentAbsolutePackageDir = path.resolve(__dirname, '..', '..');
+        // The filepaths in "../inputs/grep-results.json" are specific to my (AR's) file system.
+        // This step updates those filepaths to reflect the absolute location of the package dir
+        // on the computer running this test, thus making it work for users other than just me.
+        grepResult.file = grepResult.file.replace(arAbsolutePackageDir, currentAbsolutePackageDir);
         return grepResult;
       }), 'file'))
       .map(function(pair) {
