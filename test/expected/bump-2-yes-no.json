@@ -1,0 +1,14 @@
+[
+  {
+    "file": "/Users/andersriutta/Sites/semver-bumper-for-file-text/test/inputs/sample-OTHER.md",
+    "filteredLineMap": {
+      "0": "# Other README for sample-package-2.3.0"
+    }
+  },
+  {
+    "file": "/Users/andersriutta/Sites/semver-bumper-for-file-text/test/inputs/sample-README.md",
+    "filteredLineMap": {
+      "0": "# sample-package-2.3.0"
+    }
+  }
+]
