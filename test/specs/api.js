@@ -27,7 +27,28 @@ var commonBumpOptions = {
 
 // Run tests
 describe('Public API', function() {
+  beforeEach(function() {
+    sinon
+      .stub(fileLineUpdater, 'update', function(filepath, updater) {
+        expect(typeof filepath).to.equal('string');
+        expect(typeof updater).to.equal('function');
+        return Rx.Observable.empty();
+      });
+  });
+
+  afterEach(function() {
+    fileLineUpdater.update.restore();
+  });
+
   describe('create list of bumpable semvers & create prompt set for each one', function() {
+    beforeEach(function() {
+      sinon
+        .stub(grepObservable, 'grep', function() {
+          var allGrepResultsClone = _.cloneDeep(allGrepResults);
+          return Rx.Observable.from(allGrepResultsClone);
+        });
+    });
+
     afterEach(function() {
       grepObservable.grep.restore();
     });
@@ -46,11 +67,6 @@ describe('Public API', function() {
     var args = bumpOptions.args;
 
     it('should create many', function() {
-      sinon
-        .stub(grepObservable, 'grep', function() {
-          var allGrepResultsClone = _.cloneDeep(allGrepResults);
-          return Rx.Observable.from(allGrepResultsClone);
-        });
       var getPromptSet = semverBumperByFindAndReplace._getPromptSet;
       var createIterable = semverBumperByFindAndReplace._createIterable;
 
@@ -85,17 +101,10 @@ describe('Public API', function() {
           var allGrepResultsClone = _.cloneDeep(allGrepResults);
           return Rx.Observable.from(allGrepResultsClone);
         });
-
-      sinon
-        .stub(fileLineUpdater, 'update', function(filepath, updater) {
-          expect(typeof filepath).to.equal('string');
-          expect(typeof updater).to.equal('function');
-        });
     });
 
     afterEach(function() {
       grepObservable.grep.restore();
-      fileLineUpdater.update.restore();
     });
 
     it('should answer with a mix of yes and no', function(done) {
@@ -180,17 +189,10 @@ describe('Public API', function() {
           var grepResults = _.cloneDeep(allGrepResults).slice(0, 2);
           return Rx.Observable.from(grepResults);
         });
-
-      sinon
-        .stub(fileLineUpdater, 'update', function(filepath, updater) {
-          expect(typeof filepath).to.equal('string');
-          expect(typeof updater).to.equal('function');
-        });
     });
 
     afterEach(function() {
       grepObservable.grep.restore();
-      fileLineUpdater.update.restore();
     });
 
     it('should answer with a mix of yes and no', function(done) {
@@ -274,17 +276,10 @@ describe('Public API', function() {
           return Rx.Observable.empty();
           //return Rx.Observable.from([]);
         });
-
-      sinon
-        .stub(fileLineUpdater, 'update', function(filepath, updater) {
-          expect(typeof filepath).to.equal('string');
-          expect(typeof updater).to.equal('function');
-        });
     });
 
     afterEach(function() {
       grepObservable.grep.restore();
-      fileLineUpdater.update.restore();
     });
 
     it('should answer with a mix of yes and no', function(done) {
